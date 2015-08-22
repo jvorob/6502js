@@ -5,6 +5,8 @@
 *  Adapted by Nick Morgan
 *  https://github.com/skilldrick/6502js
 *
+*  Modified by George Vorobyev for personal use
+*
 *  Released under the GNU General Public License
 *  see http://gnu.org/licenses/gpl.html
 */
@@ -18,6 +20,7 @@ function SimulatorWidget(node) {
   var labels = Labels();
   var simulator = Simulator();
   var assembler = Assembler();
+  var CODE_START = 0x1200;
 
   function initialize() {
     stripText();
@@ -178,8 +181,8 @@ function SimulatorWidget(node) {
     var width;
     var height;
     var pixelSize;
-    var numX = 32;
-    var numY = 32;
+    var numX = 64;
+    var numY = 64;
 
     function initialize() {
       var canvas = $node.find('.screen')[0];
@@ -197,8 +200,12 @@ function SimulatorWidget(node) {
 
     function updatePixel(addr) {
       ctx.fillStyle = palette[memory.get(addr) & 0x0f];
-      var y = Math.floor((addr - 0x200) / 32);
-      var x = (addr - 0x200) % 32;
+      var yoff = Math.floor((addr & 0xff) / 32);
+      var ybase = Math.floor(((addr >>> 8) - 2) / 2) * 8;
+      var xoff = (addr & 0xff) % 32;
+      var xbase = (addr & 0x100) ? 32 : 0;
+      var y = yoff + ybase;
+      var x = xoff + xbase;
       ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
     }
 
@@ -210,7 +217,7 @@ function SimulatorWidget(node) {
   }
 
   function Memory() {
-    var memArray = new Array(0x600);
+    var memArray = new Array(CODE_START);
 
     function set(addr, val) {
       return memArray[addr] = val;
@@ -228,7 +235,7 @@ function SimulatorWidget(node) {
 
     function storeByte(addr, value) {
       set(addr, value & 0xff);
-      if ((addr >= 0x200) && (addr <= 0x5ff)) {
+      if ((addr >= 0x200) && (addr < CODE_START)) {
         display.updatePixel(addr);
       }
     }
@@ -272,7 +279,7 @@ function SimulatorWidget(node) {
     var regX = 0;
     var regY = 0;
     var regP = 0;
-    var regPC = 0x600;
+    var regPC = CODE_START;
     var regSP = 0xff;
     var codeRunning = false;
     var debug = false;
@@ -1619,11 +1626,11 @@ function SimulatorWidget(node) {
     // reset() - Reset CPU and memory.
     function reset() {
       display.reset();
-      for (var i = 0; i < 0x600; i++) { // clear ZP, stack and screen
+      for (var i = 0; i < CODE_START; i++) { // clear ZP, stack and screen
         memory.set(i, 0x00);
       }
       regA = regX = regY = 0;
-      regPC = 0x600;
+      regPC = CODE_START;
       regSP = 0xff;
       regP = 0x30;
       updateDebugInfo();
@@ -1825,7 +1832,7 @@ function SimulatorWidget(node) {
     function assembleCode() {
       simulator.reset();
       labels.reset();
-      defaultCodePC = 0x600;
+      defaultCodePC = CODE_START;
       $node.find('.messages code').empty();
 
       var code = $node.find('.code').val();
@@ -1835,7 +1842,7 @@ function SimulatorWidget(node) {
 
       message("Indexing labels..");
 
-      defaultCodePC = 0x600;
+      defaultCodePC = CODE_START;
 
       if (!labels.indexLines(lines)) {
         return false;
@@ -1843,7 +1850,7 @@ function SimulatorWidget(node) {
 
       labels.displayMessage();
 
-      defaultCodePC = 0x600;
+      defaultCodePC = CODE_START;
       message("Assembling code ...");
 
       codeLen = 0;
@@ -1996,11 +2003,11 @@ function SimulatorWidget(node) {
       }
       if (addr === -1) { pushWord(0x00); return false; }
       pushByte(opcode);
-      if (addr < (defaultCodePC - 0x600)) {  // Backwards?
-        pushByte((0xff - ((defaultCodePC - 0x600) - addr)) & 0xff);
+      if (addr < (defaultCodePC - CODE_START)) {  // Backwards?
+        pushByte((0xff - ((defaultCodePC - CODE_START) - addr)) & 0xff);
         return true;
       }
-      pushByte((addr - (defaultCodePC - 0x600) - 1) & 0xff);
+      pushByte((addr - (defaultCodePC - CODE_START) - 1) & 0xff);
       return true;
     }
 
@@ -2287,7 +2294,7 @@ function SimulatorWidget(node) {
 
     // hexDump() - Dump binary as hex to new window
     function hexdump() {
-      openPopup(memory.format(0x600, codeLen), 'Hexdump');
+      openPopup(memory.format(CODE_START, codeLen), 'Hexdump');
     }
 
     // TODO: Create separate disassembler object?
@@ -2420,7 +2427,7 @@ function SimulatorWidget(node) {
     }
 
     function disassemble() {
-      var startAddress = 0x600;
+      var startAddress = CODE_START;
       var currentAddress = startAddress;
       var endAddress = startAddress + codeLen;
       var instructions = [];
