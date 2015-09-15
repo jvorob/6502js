@@ -22,6 +22,8 @@ function SimulatorWidget(node) {
   var simulator = Simulator();
   var assembler = Assembler();
   var CODE_START = 0x1200;
+  this.defines = defines;
+  this.assembler = assembler;
 
   function initialize() {
     stripText();
@@ -1685,7 +1687,7 @@ function SimulatorWidget(node) {
         
         return nameAndVal[1]; }
 	  }
-      return false;
+      return null;
     }
 
     function reset() {
@@ -1696,20 +1698,23 @@ function SimulatorWidget(node) {
       var value, label, hilo, addr;
       var labelval, defineval
 
+
       //check if sum expression
       if (param.match(/\+/)) {
         var first  = param.replace(/^([^+]*)\+.*/,"$1");
         var second = param.replace(/^[^+]*\+(.*)/,"$1");
-        first = parse(first);
-        second = parse(second);
-        if(first === null || second === null) { return false; }
-        return first + second;
+        var firstp = parse(first);
+        var secondp = parse(second);
+        if(firstp === null || secondp === null) { return null; }
+        return firstp + secondp;
       }
 
       //check if label
-      labelval = labels.getPC(param);
-      if(labelval != -1) {
-        return labelval;
+      if(param.match(/^\w*$/)) {
+        labelval = labels.getPC(param);
+        if(labelval != -1) {
+          return parseInt(labelval);
+        }
       }
 
       //Check if DEFINEd
@@ -1719,11 +1724,11 @@ function SimulatorWidget(node) {
       }
 
       if (param.match(/^\$[0-9a-f]+$/i)) {
-        value = parseInt(param.replace(/^#\$/, ""), 16);
+        value = parseInt(param.replace(/\$/,""), 16);
         return value;
       }
       if (param.match(/^[0-9]+$/i)) {
-        value = parseInt(param.replace(/^#/, ""), 10);
+        value = parseInt(param, 10);
         return value;
       }
 
@@ -1742,8 +1747,14 @@ function SimulatorWidget(node) {
             return null;
           }
         } else {
-          return null;
+          console.log(param);
+          if(assembler.isFirstPass()) { return 0x80; }
+          else { return null; }
         }
+      }
+
+      if(param.match(/^\w+$/) && assembler.isFirstPass()) {
+        return 0xa000; //placeholder, if all else fails assume it's a label
       }
 
       return null;
@@ -2026,6 +2037,9 @@ function SimulatorWidget(node) {
           param = param.replace(/^\$/, "");
           addr = parseInt(param, 16);
         } else {
+          if(!param.match(/^[0-9]+$/)) {
+            return false;
+          }
           addr = parseInt(param, 10);
         }
         if ((addr < 0) || (addr > 0xffff)) {
@@ -2105,19 +2119,22 @@ function SimulatorWidget(node) {
 
     // checkBranch() - Commom branch function for all branches (BCC, BCS, BEQ, BNE..)
     function checkBranch(param, opcode) {
-      var addr;
+      var addr, disp;
       if (opcode === null) { return false; }
 
-      console.log(param);
       addr = defines.parse(param);
       if(addr === null) { return false; }
 
+      disp = addr - defaultCodePC - 2;
+
+      //check range
+      if((disp < -128 || disp > 127) && !isFirstPass) { message("**Out of range branch**"); return false;  }
+    
+      //2-complement
+      if (disp < 0) { disp += 0x100; }
+      
       pushByte(opcode);
-      if (addr < (defaultCodePC - CODE_START)) {  // Backwards?
-        pushByte((0xff - ((defaultCodePC - CODE_START) - addr)) & 0xff);
-        return true;
-      }
-      pushByte((addr - (defaultCodePC - CODE_START) - 1) & 0xff);
+      pushByte(disp);
       return true;
     }
 
@@ -2141,7 +2158,7 @@ function SimulatorWidget(node) {
     function checkIndirect(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(.*\)$/)) {
+      if (param.match(/^\([^(),]*\)$/)) {
         param = param.replace(/^\(.*\)$/, "$1");
         value = defines.parse(param);
         if (value === null || value < 0 || value > 0xffff) { return false; }
@@ -2156,9 +2173,9 @@ function SimulatorWidget(node) {
     function checkIndirectX(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(.*,X\)$/)) {
+      if (param.match(/^\([^(),]*,X\)$/i)) {
         param = param.replace(/^\((.*),X\)$/i, "$1");
-        values = defines.parse(param);
+        value = defines.parse(param);
         if (value === null || value < 0 || value > 255) { return false; }
         pushByte(opcode);
         pushByte(value);
@@ -2171,9 +2188,9 @@ function SimulatorWidget(node) {
     function checkIndirectY(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(.*\),Y$/)) {
+      if (param.match(/^\([^(),]*\),Y$/i)) {
         param = param.replace(/^\((.*)\),Y$/i, "$1");
-        values = defines.parse(param);
+        value = defines.parse(param);
         if (value === null || value < 0 || value > 255) { return false; }
         pushByte(opcode);
         pushByte(value);
@@ -2195,6 +2212,7 @@ function SimulatorWidget(node) {
     function checkZeroPage(param, opcode) {
       var value;
       if (opcode === null) { return false; }
+      if(param.match(/[,:()]/)) { return false; }
       value = defines.parse(param);
       if (value === null ||value < 0 || value > 255) { return false; }
       pushByte(opcode);
@@ -2206,8 +2224,8 @@ function SimulatorWidget(node) {
     function checkAbsoluteX(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^[^()]*,X$/i)) {
-        param = param.replace(/^(.*),X$/i, "$1");
+      if (param.match(/^:?[^,()]*,X$/i)) {
+        param = param.replace(/^:?(.*),X$/i, "$1");
         value = defines.parse(param);
         if (value === null || value < 0 || value > 0xffff) { return false; }
         pushByte(opcode);
@@ -2221,8 +2239,8 @@ function SimulatorWidget(node) {
     function checkAbsoluteY(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^[^()]*,Y$/i)) {
-        param = param.replace(/^(.*),Y$/i, "$1");
+      if (param.match(/^:?[^(),]*,Y$/i)) {
+        param = param.replace(/^:?(.*),Y$/i, "$1");
         value = defines.parse(param);
         if (value === null || value < 0 || value > 0xffff) { return false; }
         pushByte(opcode);
@@ -2236,7 +2254,7 @@ function SimulatorWidget(node) {
     function checkZeroPageX(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^[^()]*,X$/i)) {
+      if (param.match(/^[^:(),]*,X$/i)) {
         param = param.replace(/^(.*),X$/i, "$1");
         value = defines.parse(param);
         if (value === null || value < 0 || value > 255) { return false; }
@@ -2250,7 +2268,7 @@ function SimulatorWidget(node) {
     function checkZeroPageY(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^[^()]*,Y$/i)) {
+      if (param.match(/^[^:(),]*,Y$/i)) {
         param = param.replace(/^(.*),Y$/i, "$1");
         value = defines.parse(param);
         if (value === null || value < 0 || value > 255) { return false; }
@@ -2265,6 +2283,8 @@ function SimulatorWidget(node) {
     function checkAbsolute(param, opcode) {
       var value;
       if (opcode === null) { return false; }
+      if (param.match(/[(),]/)) { return false; }
+      param = param.replace(/^:/,"");
       value = defines.parse(param);
       if (value === null || value < 0 || value > 0xffff) { return false; }
       pushByte(opcode);
@@ -2435,7 +2455,11 @@ function SimulatorWidget(node) {
     }
 
     function disassemble() {
-      var startAddress = CODE_START;
+      var startstring = $node.find('.start').val();
+      var startAddress = defines.parse("$" + startstring);
+      if (startAddress === null) { startAddress = defines.parse(startstring); }
+      if (startAddress === null) { startAddress = CODE_START; } 
+
       var currentAddress = startAddress;
       var endAddress = startAddress + codeLen;
       var instructions = [];
@@ -2501,11 +2525,13 @@ function SimulatorWidget(node) {
   }
 
 
-  initialize();
+   initialize();
 }
+
+var widg
 
 $(document).ready(function () {
   $('.widget').each(function () {
-    SimulatorWidget(this);
+    widg = new SimulatorWidget(this);
   });
 });

@@ -264,49 +264,49 @@ AND D_0
 BEQ dc_l_c1
 LDA #$01
 dc_l_c1:
-STA $0000,X
+STA :$0000,X
 LDA #$40
 AND D_0
 BEQ dc_l_c2
 LDA #$01
 dc_l_c2:
-STA $0020,X
+STA :$0020,X
 LDA #$20
 AND D_0
 BEQ dc_l_c3
 LDA #$01
 dc_l_c3:
-STA $0040,X
+STA :$0040,X
 LDA #$10
 AND D_0
 BEQ dc_l_c4
 LDA #$01
 dc_l_c4:
-STA $0060,X
+STA :$0060,X
 LDA #$08
 AND D_0
 BEQ dc_l_c5
 LDA #$01
 dc_l_c5:
-STA $0080,X
+STA :$0080,X
 LDA #$04
 AND D_0
 BEQ dc_l_c6
 LDA #$01
 dc_l_c6:
-STA $00a0,X
+STA :$00a0,X
 LDA #$02
 AND D_0
 BEQ dc_l_c7
 LDA #$01
 dc_l_c7:
-STA $00c0,X
+STA :$00c0,X
 LDA #$01
 AND D_0
 BEQ dc_l_c8
 LDA #$01
 dc_l_c8:
-STA $00e0,X
+STA :$00e0,X
 INY
 INX
 CPY #$05
