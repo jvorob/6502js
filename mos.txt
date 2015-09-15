@@ -33,1092 +33,1093 @@ define esc_char $5c
 
 
 init:
-JMP forth_start
-get_line:
-JSR clear_buff
-get_line_loop:
-JSR get_key
-CMP #esc_char
-BNE get_line_end
-JSR handle_escape
-JMP get_line_loop
-get_line_end:
-JSR type_char
-JMP get_line_loop
+  JMP forth_start
+  get_line:
+  JSR clear_buff
+  get_line_loop:
+  JSR get_key
+  CMP #esc_char
+  BNE get_line_end
+  JSR handle_escape
+  JMP get_line_loop
+  get_line_end:
+  JSR type_char
+  JMP get_line_loop
 
 
 handle_escape:
-JSR get_key
-CMP #$63
-BEQ he_c
-CMP #$64
-BEQ he_d
-CMP #$65
-BEQ he_e
-CMP #$68
-BEQ he_h
-CMP #$6a
-BEQ he_j
-CMP #$6b
-BEQ he_k
-CMP #$6c
-BEQ he_l
-CMP #$72
-BEQ he_r
-CMP #$73
-BEQ he_s
-RTS
+  JSR get_key
+  CMP #$63
+  BEQ he_c
+  CMP #$64
+  BEQ he_d
+  CMP #$65
+  BEQ he_e
+  CMP #$68
+  BEQ he_h
+  CMP #$6a
+  BEQ he_j
+  CMP #$6b
+  BEQ he_k
+  CMP #$6c
+  BEQ he_l
+  CMP #$72
+  BEQ he_r
+  CMP #$73
+  BEQ he_s
+  RTS
 
 
 he_e:
-PLA
-PLA
-RTS
+  PLA
+  PLA
+  RTS
 
 he_h:
-JSR he_s
-JSR reset_cursor
-LDA #<help_string
-STA P0L
-LDA #>help_string
-STA P0H
-LDA #$50
-JSR draw_string
-JSR get_key
-JSR he_l
-RTS
+  JSR he_s
+  JSR reset_cursor
+  LDA #<help_string
+  STA P0L
+  LDA #>help_string
+  STA P0H
+  LDA #$50
+  JSR draw_string
+  JSR get_key
+  JSR he_l
+  RTS
 
 he_d:
-LDX buff_pos
-BEQ he_d_end
-DEX
-STX buff_pos
-LDY #$00
-STY buff,X
-JSR cursor_back
-LDA #$20
-JSR clear_char
-he_d_end:
-RTS
+  LDX buff_pos
+  BEQ he_d_end
+  DEX
+  STX buff_pos
+  LDY #$00
+  STY buff,X
+  JSR cursor_back
+  LDA #$20
+  JSR clear_char
+  he_d_end:
+  RTS
 
 he_c:
-JMP clear_entry
-he_j:
-LDA #1
-JSR scroll_up_all
-RTS
-he_k:
-RTS
+  JMP clear_entry
+  he_j:
+  LDA #1
+  JSR scroll_up_all
+  RTS
+  he_k:
+  RTS
 
 he_l:
-JSR clear_screen
-LDA $0e
-STA $02
-LDA $0f
-STA $03
-LDA #buff
-STA $00
-LDA #0
-STA $01
-LDA #$50
-JSR strncpy
-STA buff_pos
-JSR he_r
-RTS
+  JSR clear_screen
+  LDA $0e
+  STA $02
+  LDA $0f
+  STA $03
+  LDA #buff
+  STA $00
+  LDA #0
+  STA $01
+  LDA #$50
+  JSR strncpy
+  STA buff_pos
+  JSR he_r
+  RTS
 
 he_r:
-JSR redraw_buff
-RTS
+  JSR redraw_buff
+  RTS
+
 he_s:
-LDA #0
-STA $01
-LDA #buff
-STA $00
-JSR strlen
-CLC
-ADC #1
-JSR malloc
-LDA #buff
-STA $02
-LDA #0
-STA $03
-LDA buff_size
-JSR strncpy
-LDA $01
-STA $0f
-LDA $00
-STA $0e
-LDA heap_l
-STA $00
-LDA heap_h
-STA $01
-LDY #04
-LDA ($00),Y
-STA $08
-INY
-LDA ($00),Y
-STA $09
-RTS
+  LDA #0
+  STA $01
+  LDA #buff
+  STA $00
+  JSR strlen
+  CLC
+  ADC #1
+  JSR malloc
+  LDA #buff
+  STA $02
+  LDA #0
+  STA $03
+  LDA buff_size
+  JSR strncpy
+  LDA $01
+  STA $0f
+  LDA $00
+  STA $0e
+  LDA heap_l
+  STA $00
+  LDA heap_h
+  STA $01
+  LDY #04
+  LDA ($00),Y
+  STA $08
+  INY
+  LDA ($00),Y
+  STA $09
+  RTS
 
 
 
 get_key:
-SEC
-JSR cursor_flash
+  SEC
+  JSR cursor_flash
 poll_keys:
-LDA $ff
-BNE poll_keys_continue
-INY
-NOP
-NOP
-BNE poll_keys
-ROL
-EOR #1
-LSR
-JSR cursor_flash
-JMP poll_keys
+  LDA $ff
+  BNE poll_keys_continue
+  INY
+  NOP
+  NOP
+  BNE poll_keys
+  ROL
+  EOR #1
+  LSR
+  JSR cursor_flash
+  JMP poll_keys
 poll_keys_continue:
-LDX #0
-STX $ff
-PHA
-JSR cursor_clear
-PLA
-RTS
+  LDX #0
+  STX $ff
+  PHA
+  JSR cursor_clear
+  PLA
+  RTS
 
 
 cursor_clear:
-CLC
+  CLC
 ;sets cursor to carry bit, preserves carry
 cursor_flash:
-LDA curs_h
-STA $01
-LDA #$c0
-STA $00
-LDY curs_l
-LDX #5
-LDA #0
-ROL
+  LDA curs_h
+  STA $01
+  LDA #$c0
+  STA $00
+  LDY curs_l
+  LDX #5
+  LDA #0
+  ROL
 cursor_flash_loop:
-STA ($00),Y
-INY
-DEX
-BNE cursor_flash_loop
-LSR
-RTS
+  STA ($00),Y
+  INY
+  DEX
+  BNE cursor_flash_loop
+  LSR
+  RTS
 
 
 
 lookup_key:
-SEC
-SBC #$20
-BPL lookup_key_1
-LDA #$20
+  SEC
+  SBC #$20
+  BPL lookup_key_1
+  LDA #$20
 lookup_key_1:
-CMP #50
-BCS lookup_key_p2
-LDX #>keytable1
-STX D_BMP_H
-BMI lookup_key_2
+  CMP #50
+  BCS lookup_key_p2
+  LDX #>keytable1
+  STX D_BMP_H
+  BMI lookup_key_2
 lookup_key_p2:
-LDX #>keytable2
-STX D_BMP_H
-SEC
-SBC #50
-lookup_key_2:
-STA D_BMP_L
-ASL A
-ASL A
-CLC
-ADC D_BMP_L
-STA D_BMP_L
-RTS
+  LDX #>keytable2
+  STX D_BMP_H
+  SEC
+  SBC #50
+  lookup_key_2:
+  STA D_BMP_L
+  ASL A
+  ASL A
+  CLC
+  ADC D_BMP_L
+  STA D_BMP_L
+  RTS
 
 
 draw_char:
-STA D_1
-TXA
-PHA
-TYA
-PHA
-LDA D_1
-JSR lookup_key
-LDA curs_h
-CMP #$12
-BCS dc_end
-STA dc_l_c1+$02
-STA dc_l_c2+$02
-STA dc_l_c3+$02
-STA dc_l_c4+$02
-STA dc_l_c5+$02
-STA dc_l_c6+$02
-STA dc_l_c7+$02
-STA dc_l_c8+$02
-LDY #$00
-LDX curs_l
+  STA D_1
+  TXA
+  PHA
+  TYA
+  PHA
+  LDA D_1
+  JSR lookup_key
+  LDA curs_h
+  CMP #$12
+  BCS dc_end
+  STA dc_l_c1+$02
+  STA dc_l_c2+$02
+  STA dc_l_c3+$02
+  STA dc_l_c4+$02
+  STA dc_l_c5+$02
+  STA dc_l_c6+$02
+  STA dc_l_c7+$02
+  STA dc_l_c8+$02
+  LDY #$00
+  LDX curs_l
 dc_loop_across:
-LDA (D_BMP_L),Y
-STA D_0
-CLC
-LDA #$80
-AND D_0
-BEQ dc_l_c1
-LDA #$01
-dc_l_c1:
-STA :$0000,X
-LDA #$40
-AND D_0
-BEQ dc_l_c2
-LDA #$01
-dc_l_c2:
-STA :$0020,X
-LDA #$20
-AND D_0
-BEQ dc_l_c3
-LDA #$01
-dc_l_c3:
-STA :$0040,X
-LDA #$10
-AND D_0
-BEQ dc_l_c4
-LDA #$01
-dc_l_c4:
-STA :$0060,X
-LDA #$08
-AND D_0
-BEQ dc_l_c5
-LDA #$01
-dc_l_c5:
-STA :$0080,X
-LDA #$04
-AND D_0
-BEQ dc_l_c6
-LDA #$01
-dc_l_c6:
-STA :$00a0,X
-LDA #$02
-AND D_0
-BEQ dc_l_c7
-LDA #$01
-dc_l_c7:
-STA :$00c0,X
-LDA #$01
-AND D_0
-BEQ dc_l_c8
-LDA #$01
-dc_l_c8:
-STA :$00e0,X
-INY
-INX
-CPY #$05
-BNE dc_loop_across
+  LDA (D_BMP_L),Y
+  STA D_0
+  CLC
+  LDA #$80
+  AND D_0
+  BEQ dc_l_c1
+  LDA #$01
+  dc_l_c1:
+  STA :$0000,X
+  LDA #$40
+  AND D_0
+  BEQ dc_l_c2
+  LDA #$01
+  dc_l_c2:
+  STA :$0020,X
+  LDA #$20
+  AND D_0
+  BEQ dc_l_c3
+  LDA #$01
+  dc_l_c3:
+  STA :$0040,X
+  LDA #$10
+  AND D_0
+  BEQ dc_l_c4
+  LDA #$01
+  dc_l_c4:
+  STA :$0060,X
+  LDA #$08
+  AND D_0
+  BEQ dc_l_c5
+  LDA #$01
+  dc_l_c5:
+  STA :$0080,X
+  LDA #$04
+  AND D_0
+  BEQ dc_l_c6
+  LDA #$01
+  dc_l_c6:
+  STA :$00a0,X
+  LDA #$02
+  AND D_0
+  BEQ dc_l_c7
+  LDA #$01
+  dc_l_c7:
+  STA :$00c0,X
+  LDA #$01
+  AND D_0
+  BEQ dc_l_c8
+  LDA #$01
+  dc_l_c8:
+  STA :$00e0,X
+  INY
+  INX
+  CPY #$05
+  BNE dc_loop_across
 dc_end:
-PLA
-TAY
-PLA
-TAX
-RTS
+  PLA
+  TAY
+  PLA
+  TAX
+  RTS
 
 
 clear_char:
-LDY #$04
-CLC
+  LDY #$04
+  CLC
 cc_loop:
-LDA #$00
-STA (curs_l),Y
-DEY
-STA (curs_l),Y
-DEY
-STA (curs_l),Y
-DEY
-STA (curs_l),Y
-DEY
-STA (curs_l),Y
-TYA
-ADC #$24
-TAY
-BCC cc_loop
-RTS
+  LDA #$00
+  STA (curs_l),Y
+  DEY
+  STA (curs_l),Y
+  DEY
+  STA (curs_l),Y
+  DEY
+  STA (curs_l),Y
+  DEY
+  STA (curs_l),Y
+  TYA
+  ADC #$24
+  TAY
+  BCC cc_loop
+  RTS
 
 clear_buff:
-LDA #0
-LDX #max_buff_size
+  LDA #0
+  LDX #max_buff_size
 cb_loop:
-DEX
-STA buff,X
-BNE cb_loop
-STA buff_pos
-RTS
+  DEX
+  STA buff,X
+  BNE cb_loop
+  STA buff_pos
+  RTS
 
 clear_entry:
-LDX buff_pos
-BNE ce_loop
-RTS
+  LDX buff_pos
+  BNE ce_loop
+  RTS
 ce_loop:
-LDA #0
-STA buff,X
-JSR cursor_back
-JSR clear_char
-DEX
-BNE ce_loop
-LDA #0
-STA buff_pos
-RTS
+  LDA #0
+  STA buff,X
+  JSR cursor_back
+  JSR clear_char
+  DEX
+  BNE ce_loop
+  LDA #0
+  STA buff_pos
+  RTS
 
 clear_screen:
-CLC
-LDX #$02
-TXA
+  CLC
+  LDX #$02
+  TXA
 cs_loop:
-JSR clear_page
-INX
-TXA
-CMP #$12
-BNE cs_loop
+  JSR clear_page
+  INX
+  TXA
+  CMP #$12
+  BNE cs_loop
 cs_end:
-RTS
+  RTS
 
 clear_page:
-STA cp_loop+$4
-STA cp_loop+$7
-STA cp_loop+$0a
-STA cp_loop+$0d
-STA cp_loop+$10
-STA cp_loop+$13
-STA cp_loop+$16
-STA cp_loop+$19
-STA cp_loop+$1c
-STA cp_loop+$1f
-STA cp_loop+$22
-STA cp_loop+$25
-STA cp_loop+$28
-STA cp_loop+$2b
-STA cp_loop+$2e
-STA cp_loop+$31
-LDY #$00
+  STA cp_loop+$4
+  STA cp_loop+$7
+  STA cp_loop+$0a
+  STA cp_loop+$0d
+  STA cp_loop+$10
+  STA cp_loop+$13
+  STA cp_loop+$16
+  STA cp_loop+$19
+  STA cp_loop+$1c
+  STA cp_loop+$1f
+  STA cp_loop+$22
+  STA cp_loop+$25
+  STA cp_loop+$28
+  STA cp_loop+$2b
+  STA cp_loop+$2e
+  STA cp_loop+$31
+  LDY #$00
 cp_loop:
-LDA #0
-STA $0000,Y
-STA $0001,Y
-STA $0002,Y
-STA $0003,Y
-STA $0004,Y
-STA $0005,Y
-STA $0006,Y
-STA $0007,Y
-STA $0008,Y
-STA $0009,Y
-STA $000a,Y
-STA $000b,Y
-STA $000c,Y
-STA $000d,Y
-STA $000e,Y
-STA $000f,Y
-TYA
-ADC #$10
-TAY
-BNE cp_loop
-RTS
+  LDA #0
+  STA :$0000,Y
+  STA :$0001,Y
+  STA :$0002,Y
+  STA :$0003,Y
+  STA :$0004,Y
+  STA :$0005,Y
+  STA :$0006,Y
+  STA :$0007,Y
+  STA :$0008,Y
+  STA :$0009,Y
+  STA :$000a,Y
+  STA :$000b,Y
+  STA :$000c,Y
+  STA :$000d,Y
+  STA :$000e,Y
+  STA :$000f,Y
+  TYA
+  ADC #$10
+  TAY
+  BNE cp_loop
+  RTS
 
 scroll_up_all:
-ASL
-STA D_0
-LDA #$10
-SEC
-SBC D_0
-ADC #1
-STA D_1
-LDA #$2
+  ASL
+  STA D_0
+  LDA #$10
+  SEC
+  SBC D_0
+  ADC #1
+  STA D_1
+  LDA #$2
 scroll_up_all_1:
-PHA
-JSR scroll_up
-PLA
-CLC
-ADC #$02
-CMP D_1
-BNE scroll_up_all_1
-CLC
+  PHA
+  JSR scroll_up
+  PLA
+  CLC
+  ADC #$02
+  CMP D_1
+  BNE scroll_up_all_1
+  CLC
 scroll_up_all_2:
-CMP #$12
-BEQ scroll_up_all_end
-PHA
-JSR clear_page
-PLA
-CLC
-ADC #$1
-BNE scroll_up_all_2
+  CMP #$12
+  BEQ scroll_up_all_end
+  PHA
+  JSR clear_page
+  PLA
+  CLC
+  ADC #$1
+  BNE scroll_up_all_2
 scroll_up_all_end:
-RTS
+  RTS
 
 
 scroll_up:
-AND #$fe
-CLC
-TAX
+  AND #$fe
+  CLC
+  TAX
 su_prepare_pages:
-TXA
-STA su_loop+$5
-STA su_loop+$b
-STA su_loop+$11
-STA su_loop+$17
-STA su_loop+$1d
-STA su_loop+$23
-STA su_loop+$29
-STA su_loop+$2f
-ADC D_0
-STA su_loop+$2
-STA su_loop+$8
-STA su_loop+$e
-STA su_loop+$14
-STA su_loop+$1a
-STA su_loop+$20
-STA su_loop+$26
-STA su_loop+$2c
-LDY #$00
+  TXA
+  STA su_loop+$5
+  STA su_loop+$b
+  STA su_loop+$11
+  STA su_loop+$17
+  STA su_loop+$1d
+  STA su_loop+$23
+  STA su_loop+$29
+  STA su_loop+$2f
+  ADC D_0
+  STA su_loop+$2
+  STA su_loop+$8
+  STA su_loop+$e
+  STA su_loop+$14
+  STA su_loop+$1a
+  STA su_loop+$20
+  STA su_loop+$26
+  STA su_loop+$2c
+  LDY #$00
 su_loop:
-LDA $0000,Y
-STA $0000,Y
-LDA $0001,Y
-STA $0001,Y
-LDA $0002,Y
-STA $0002,Y
-LDA $0003,Y
-STA $0003,Y
-LDA $0004,Y
-STA $0004,Y
-LDA $0005,Y
-STA $0005,Y
-LDA $0006,Y
-STA $0006,Y
-LDA $0007,Y
-STA $0007,Y
-TYA
-ADC #$08
-TAY
-BNE su_loop
-TXA
-ADC #0
-TAX
-AND #$01
-BEQ su_end
-JMP su_prepare_pages
+  LDA :$0000,Y
+  STA :$0000,Y
+  LDA :$0001,Y
+  STA :$0001,Y
+  LDA :$0002,Y
+  STA :$0002,Y
+  LDA :$0003,Y
+  STA :$0003,Y
+  LDA :$0004,Y
+  STA :$0004,Y
+  LDA :$0005,Y
+  STA :$0005,Y
+  LDA :$0006,Y
+  STA :$0006,Y
+  LDA :$0007,Y
+  STA :$0007,Y
+  TYA
+  ADC #$08
+  TAY
+  BNE su_loop
+  TXA
+  ADC #0
+  TAX
+  AND #$01
+  BEQ su_end
+  JMP su_prepare_pages
 su_end:
-RTS
+  RTS
 
 type_char:
-STA $00
-LDA buff_pos
-CMP buff_size
-BNE type_char_1
-RTS
+  STA $00
+  LDA buff_pos
+  CMP buff_size
+  BNE type_char_1
+  RTS
 type_char_1:
-LDA $00
-LDX buff_pos
-STA buff,X
-INC buff_pos
-LDA curs_h
-CMP #$12
-BCC type_char_2
-JSR newline
+  LDA $00
+  LDX buff_pos
+  STA buff,X
+  INC buff_pos
+  LDA curs_h
+  CMP #$12
+  BCC type_char_2
+  JSR newline
 type_char_2:
-LDA $00
-JSR draw_char
-JSR cursor_fwd
-RTS
+  LDA $00
+  JSR draw_char
+  JSR cursor_fwd
+  RTS
 
 
 redraw_buff:
-JSR reset_cursor
-LDA #buff
-STA P0L
-LDA #0
-STA P0H
-LDA buff_size
-JSR draw_string
-RTS
+  JSR reset_cursor
+  LDA #buff
+  STA P0L
+  LDA #0
+  STA P0H
+  LDA buff_size
+  JSR draw_string
+  RTS
 
 
 draw_string:
-LDY #0
-TAX
-BEQ draw_string_end
+  LDY #0
+  TAX
+  BEQ draw_string_end
 draw_string_loop:
-LDA (P0L),Y
-BEQ draw_string_end
-JSR draw_char
-JSR cursor_fwd
-INY
-DEX
-BNE draw_string_loop
+  LDA (P0L),Y
+  BEQ draw_string_end
+  JSR draw_char
+  JSR cursor_fwd
+  INY
+  DEX
+  BNE draw_string_loop
 draw_string_end:
-TYA
-RTS
+  TYA
+  RTS
 
 
 reset_cursor:
-PHA
-LDA #$02
-STA curs_l
-STA curs_h
-PLA
-RTS
+  PHA
+  LDA #$02
+  STA curs_l
+  STA curs_h
+  PLA
+  RTS
 
 cursor_fwd:
-LDA curs_h
-CMP #$12
-BCS cursor_fwd_end
-LDA curs_l
-CLC
-ADC #$06
-CMP #27
-BMI cursor_fwd_2
-LDA curs_h
-ADC #0
-STA curs_h
-AND #$01
-EOR #$01
-ASL A
+  LDA curs_h
+  CMP #$12
+  BCS cursor_fwd_end
+  LDA curs_l
+  CLC
+  ADC #$06
+  CMP #27
+  BMI cursor_fwd_2
+  LDA curs_h
+  ADC #0
+  STA curs_h
+  AND #$01
+  EOR #$01
+  ASL A
 cursor_fwd_2:
-STA curs_l
+  STA curs_l
 cursor_fwd_end:
-RTS
+  RTS
 
 cursor_back:
-LDA curs_l
-SEC
-SBC #$06
-BPL cursor_back_skip
-LDA #25
-DEC curs_h
-LDA curs_h
-AND #$01
-EOR #$01
-ASL A
-CLC
-ADC #$18
+  LDA curs_l
+  SEC
+  SBC #$06
+  BPL cursor_back_skip
+  LDA #25
+  DEC curs_h
+  LDA curs_h
+  AND #$01
+  EOR #$01
+  ASL A
+  CLC
+  ADC #$18
 cursor_back_skip:
-STA curs_l
-RTS
+  STA curs_l
+  RTS
 
 
 freshline:
-LDA curs_l
-CMP #2
-BNE newline
-RTS
+  LDA curs_l
+  CMP #2
+  BNE newline
+  RTS
 
 newline:
-LDA #$02
-STA curs_l
-CLC
-ADC curs_h
-AND #$fe
-CMP #$12
-BMI newline_1
-LDA #4
-JSR scroll_up_all
-LDA #$a
+  LDA #$02
+  STA curs_l
+  CLC
+  ADC curs_h
+  AND #$fe
+  CMP #$12
+  BMI newline_1
+  LDA #4
+  JSR scroll_up_all
+  LDA #$a
 newline_1:
-STA curs_h
-RTS
+  STA curs_h
+  RTS
 
 reset_heap:
-LDA #$b0
-STA heap_h
-LDA #$00
-STA heap_l
-LDA #0
-STA $b000
-LDA #0
-STA $b001
-LDA #heap_l
-STA $b002
-LDA #0
-STA $b003
-LDA #0
-STA $b004
-LDA #$20
-STA $b005
-RTS
+  LDA #$b0
+  STA heap_h
+  LDA #$00
+  STA heap_l
+  LDA #0
+  STA $b000
+  LDA #0
+  STA $b001
+  LDA #heap_l
+  STA $b002
+  LDA #0
+  STA $b003
+  LDA #0
+  STA $b004
+  LDA #$20
+  STA $b005
+  RTS
 
 malloc:
-TAX
-INX
-TXA
-CMP #$06
-BCS mal2
-LDA #$06
+  TAX
+  INX
+  TXA
+  CMP #$06
+  BCS mal2
+  LDA #$06
 mal2:
-STA $02
-LDA heap_l
-STA $00
-LDA heap_h
-STA $01
-LDX #$00
+  STA $02
+  LDA heap_l
+  STA $00
+  LDA heap_h
+  STA $01
+  LDX #$00
 mal_wlk_loop:
-LDY #$04
-LDA ($00),Y
-CMP $02
-BCS mal_split2
-INY
-LDA ($00),Y
-BNE mal_split
-JSR walk_fwd
-JMP mal_wlk_loop
+  LDY #$04
+  LDA ($00),Y
+  CMP $02
+  BCS mal_split2
+  INY
+  LDA ($00),Y
+  BNE mal_split
+  JSR walk_fwd
+  JMP mal_wlk_loop
 mal_split:
-DEY
-LDA ($00),Y
+  DEY
+  LDA ($00),Y
 mal_split2:
-SEC
-SBC $02
-STA ($00),Y
-PHA
-INY
-BCS mal_split3
-LDA ($00),Y
-SBC #0
-STA ($00),Y
+  SEC
+  SBC $02
+  STA ($00),Y
+  PHA
+  INY
+  BCS mal_split3
+  LDA ($00),Y
+  SBC #0
+  STA ($00),Y
 mal_split3:
-PLA
-CLC
-ADC $00
-PHA
-LDA ($00),Y
-ADC $01
-STA $01
-PLA
-STA $00
-DEC $02
-LDA $02
-STA ($00,X)
-INC $00
-BNE mal_split4
-INC $01
+  PLA
+  CLC
+  ADC $00
+  PHA
+  LDA ($00),Y
+  ADC $01
+  STA $01
+  PLA
+  STA $00
+  DEC $02
+  LDA $02
+  STA ($00,X)
+  INC $00
+  BNE mal_split4
+  INC $01
 mal_split4:
-RTS
+  RTS
 
 walk_fwd:
-PHA
-LDA ($00,X)
-PHA
-INC $00,X
-BNE wf2
-INC $01,X
+  PHA
+  LDA ($00,X)
+  PHA
+  INC $00,X
+  BNE wf2
+  INC $01,X
 wf2:
-LDA ($00,X)
-BEQ end
-STA $01,X
-PLA
-STA $00,X
-PLA
-RTS
+  LDA ($00,X)
+  BEQ end
+  STA $01,X
+  PLA
+  STA $00,X
+  PLA
+  RTS
 
 strncpy:
-TAX
-BEQ strncpy_end
-LDY #0
+  TAX
+  BEQ strncpy_end
+  LDY #0
 strncpy_loop:
-LDA ($02),Y
-STA ($00),Y
-BEQ strncpy_end
-INY
-DEX
-BNE strncpy_loop
-BEQ strncpy_end
+  LDA ($02),Y
+  STA ($00),Y
+  BEQ strncpy_end
+  INY
+  DEX
+  BNE strncpy_loop
+  BEQ strncpy_end
 strncpy_end:
-TYA
-RTS
+  TYA
+  RTS
 
 strlen:
-LDY #0
+  LDY #0
 strlen_loop:
-LDA ($00),Y
-BEQ strlen_end
-INY
-BNE strlen_loop
-JMP end
+  LDA ($00),Y
+  BEQ strlen_end
+  INY
+  BNE strlen_loop
+  JMP end
 strlen_end:
-TYA
-RTS
+  TYA
+  RTS
 
 end:
-LDA #$CD
-TAX
-TXS
-PLA
-TAX
-PLA
-TAY
-LDA #$AB
+  LDA #$CD
+  TAX
+  TXS
+  PLA
+  TAX
+  PLA
+  TAY
+  LDA #$AB
 end2:
-JMP end2
-JMP $feeb
-NOP
-NOP
-NOP
+  JMP end2
+  JMP $feeb
+  NOP
+  NOP
+  NOP
 
 
 help_string:
-DCB "Help:     \d bkspc  \c clrscrn\h help   \s savscrn\l ld scrn"
-DCB $00
+  DCB "Help:     \d bkspc  \c clrscrn\h help   \s savscrn\l ld scrn"
+  DCB $00
 
 make_uppercase:
-CMP #$7b
-BPL mu_end
-CMP #$61
-BMI mu_end
-SBC #$20
+  CMP #$7b
+  BPL mu_end
+  CMP #$61
+  BMI mu_end
+  SBC #$20
 mu_end:
-RTS
+  RTS
 
 zero_cmp:
-LDX #0
-STX $02
-STX $03
-BEQ stack_cmp_1
+  LDX #0
+  STX $02
+  STX $03
+  BEQ stack_cmp_1
 stack_cmp:
-LDX #2
-JSR popDS
-LDX #0
+  LDX #2
+  JSR popDS
+  LDX #0
 stack_cmp_1:
-JSR popDS
-LDA $01
-CMP $03
-BNE stack_cmp_end
-LDA $00
-CMP $02
+  JSR popDS
+  LDA $01
+  CMP $03
+  BNE stack_cmp_end
+  LDA $00
+  CMP $02
 stack_cmp_end:
-PHP
-LDA $01
-EOR $03
-AND #$80
-BEQ stack_cmp_end_2
-LDA #1
-TSX
-EOR $101,X
-STA $101,X
+  PHP
+  LDA $01
+  EOR $03
+  AND #$80
+  BEQ stack_cmp_end_2
+  LDA #1
+  TSX
+  EOR $101,X
+  STA $101,X
 stack_cmp_end_2:
-PLP
-RTS
+  PLP
+  RTS
 
 _two_comp:
-LDA $01,X
-EOR #$ff
-STA $01
-LDA $00,X
-EOR #$ff
-CLC
-ADC #1
-STA $00,X
-BNE _two_comp_end
-INC $01,X
+  LDA $01,X
+  EOR #$ff
+  STA $01
+  LDA $00,X
+  EOR #$ff
+  CLC
+  ADC #1
+  STA $00,X
+  BNE _two_comp_end
+  INC $01,X
 _two_comp_end:
-RTS
+  RTS
 
 divide:
-LDX #0
-STX $03
-STX $04
-STX $05
-STX $06
-LDY #$10
-LDA $01
-BMI divide_loop
+  LDX #0
+  STX $03
+  STX $04
+  STX $05
+  STX $06
+  LDY #$10
+  LDA $01
+  BMI divide_loop
 divide_zero_loop:
-DEY
-BEQ divide_loop
-ASL $00
-ROL $01
-BPL divide_zero_loop
+  DEY
+  BEQ divide_loop
+  ASL $00
+  ROL $01
+  BPL divide_zero_loop
 divide_loop:
-ASL $00
-ROL $01
-LDA $05
-ROL
-STA $05
-SEC
-SBC $02
-BCC divide_rem_skip
-STA $05
+  ASL $00
+  ROL $01
+  LDA $05
+  ROL
+  STA $05
+  SEC
+  SBC $02
+  BCC divide_rem_skip
+  STA $05
 divide_rem_skip:
-ROL $03
-ROL $04
-DEY
-BNE divide_loop
-RTS
+  ROL $03
+  ROL $04
+  DEY
+  BNE divide_loop
+  RTS
 
 multiply:
-LDA $00
-STA $02
-LDA $01
-STA $03
-LDA $04
-LDX #$08
-LDA $04
+  LDA $00
+  STA $02
+  LDA $01
+  STA $03
+  LDA $04
+  LDX #$08
+  LDA $04
 multiply_zero_loop:
-ASL
-BCS multiply_dbl
-DEX
-BCC multiply_zero_loop
-BEQ multiply_end
+  ASL
+  BCS multiply_dbl
+  DEX
+  BCC multiply_zero_loop
+  BEQ multiply_end
 multiply_loop:
-ASL
-BCC multiply_dbl
-STA $04
-CLC
-LDA $00
-ADC $02
-STA $00
-LDA $01
-ADC $03
-STA $01
-LDA $04
+  ASL
+  BCC multiply_dbl
+  STA $04
+  CLC
+  LDA $00
+  ADC $02
+  STA $00
+  LDA $01
+  ADC $03
+  STA $01
+  LDA $04
 multiply_dbl:
-DEX
-BEQ multiply_end
-ASL $00
-ROL $01
-BCC multiply_loop
+  DEX
+  BEQ multiply_end
+  ASL $00
+  ROL $01
+  BCC multiply_loop
 multiply_end:
-RTS
+  RTS
 
 popDS:
-LDY SP
-BNE popDS_notoverflow
-LDA MODE
-ORA #$02
-STA MODE
+  LDY SP
+  BNE popDS_notoverflow
+  LDA MODE
+  ORA #$02
+  STA MODE
 popDS_notoverflow:
-LDA DSTACK,Y
-STA $00,X
-INY
-LDA DSTACK,Y
-STA $01,X
-INY
-STY SP
-RTS
+  LDA DSTACK,Y
+  STA $00,X
+  INY
+  LDA DSTACK,Y
+  STA $01,X
+  INY
+  STY SP
+  RTS
 
 popRS:
-LDY RSP
-LDA RSTACK,Y
-STA $00,X
-INY
-LDA RSTACK,Y
-STA $01,X
-INY
-STY RSP
-RTS
+  LDY RSP
+  LDA RSTACK,Y
+  STA $00,X
+  INY
+  LDA RSTACK,Y
+  STA $01,X
+  INY
+  STY RSP
+  RTS
 
 pushByte:
-LDY SP
-DEY
-DEY
-STA DSTACK,Y
-LDA #0
-STA DSTACKH,Y
-STY SP
-RTS
+  LDY SP
+  DEY
+  DEY
+  STA DSTACK,Y
+  LDA #0
+  STA DSTACKH,Y
+  STY SP
+  RTS
 
 pushDS:
-LDY SP
-DEY
-LDA $01,X
-STA DSTACK,Y
-DEY
-LDA $00,X
-STA DSTACK,Y
-STY SP
-RTS
+  LDY SP
+  DEY
+  LDA $01,X
+  STA DSTACK,Y
+  DEY
+  LDA $00,X
+  STA DSTACK,Y
+  STY SP
+  RTS
 
 pushRS:
-LDY RSP
-DEY
-LDA $01,X
-STA RSTACK,Y
-DEY
-LDA $00,X
-STA RSTACK,Y
-STY RSP
-RTS
+  LDY RSP
+  DEY
+  LDA $01,X
+  STA RSTACK,Y
+  DEY
+  LDA $00,X
+  STA RSTACK,Y
+  STY RSP
+  RTS
 
 fetch:
-LDA ($00,X)
-PHA
-INC $00,X
-LDA ($00,X)
-STA $00,X
-PLA
-STA $00,X
-RTS
+  LDA ($00,X)
+  PHA
+  INC $00,X
+  LDA ($00,X)
+  STA $00,X
+  PLA
+  STA $00,X
+  RTS
 
 
 _if:
-DCB :_if+$2
-LDX #0
-JSR popDS
-LDA $00
-ORA $01
-BEQ _if_f
-INC IR
-BEQ _if_incirh
-JMP next
+  DCB :_if+$2
+  LDX #0
+  JSR popDS
+  LDA $00
+  ORA $01
+  BEQ _if_f
+  INC IR
+  BEQ _if_incirh
+  JMP next
 _if_f:
-LDA (IR,X)
-CLC
-ADC IR
-STA IR
-BCS _if_incirh
-JMP next
+  LDA (IR,X)
+  CLC
+  ADC IR
+  STA IR
+  BCS _if_incirh
+  JMP next
 _if_incirh:
-INC IRH
-JMP next
+  INC IRH
+  JMP next
 
 _end:
-DCB :_end+$2
-LDX #0
-JSR popDS
-LDA $00
-ORA $01
-BEQ _while+$2
-INC IR
-BEQ _if_incirh
-JMP next
+  DCB :_end+$2
+  LDX #0
+  JSR popDS
+  LDA $00
+  ORA $01
+  BEQ _while+$2
+  INC IR
+  BEQ _if_incirh
+  JMP next
 
 _while:
-DCB :_while+$2
-LDA IR
-SEC
-LDX #0
-SBC (IR,X)
-STA IR
-BCC _while_decirh
-JMP next
+  DCB :_while+$2
+  LDA IR
+  SEC
+  LDX #0
+  SBC (IR,X)
+  STA IR
+  BCC _while_decirh
+  JMP next
 _while_decirh:
-DEC IRH
-JMP next
+  DEC IRH
+  JMP next
 
 _litnum:
-DCB :_litnum+$2
-LDY #1
-LDA (IR),Y
-STA $01
-DEY
-LDA (IR),Y
-STA $00
-LDX #0
-JSR pushDS
-LDA IR
-CLC
-ADC #2
-STA IR
-BCS _if_incirh
-JMP next
+  DCB :_litnum+$2
+  LDY #1
+  LDA (IR),Y
+  STA $01
+  DEY
+  LDA (IR),Y
+  STA $00
+  LDX #0
+  JSR pushDS
+  LDA IR
+  CLC
+  ADC #2
+  STA IR
+  BCS _if_incirh
+  JMP next
 
 _clitnum:
-DCB :_clitnum+$2
-LDX #0
-STX $01
-LDA (IR,X)
-STA $00
-JSR pushDS
-INC IR
-BEQ _if_incirh
-JMP next
+  DCB :_clitnum+$2
+  LDX #0
+  STX $01
+  LDA (IR,X)
+  STA $00
+  JSR pushDS
+  INC IR
+  BEQ _if_incirh
+  JMP next
 
 _patch:
-DCB :_patch+$2
-LDX #WA
-JSR popDS
-JMP forth_start
+  DCB :_patch+$2
+  LDX #WA
+  JSR popDS
+  JMP forth_start
 
 
 
 *=$d000
 startmsg:
-DCB $0a
-DCB "FORSH 0.1:"
+  DCB $0a
+  DCB "FORSH 0.1:"
 
 restartmsg:
-DCB $08
-DCB "RESHTART"
+  DCB $08
+  DCB "RESHTART"
 
 stackmsg:
-DCB $0a
-DCB "STK UNDRFL"
+  DCB $0a
+  DCB "STK UNDRFL"
 
 okmsg:
-DCB $03
-DCB " OK"
+  DCB $03
+  DCB " OK"
 
 
 
 outer_interp:
-DCB :type_1
-DCB :inline_1
-DCB :aspace_1
-DCB :token_1
-DCB :search_1
-DCB :_if,$0e
-DCB :qnumber_1
-DCB :_if,  $06
-DCB :question_1
-DCB :_while,$16
-DCB :_while,$15
-DCB :execute_1
-DCB :qstack_1
-DCB :_while,$1c
+  DCB :type_1
+  DCB :inline_1
+  DCB :aspace_1
+  DCB :token_1
+  DCB :search_1
+  DCB :_if,$0e
+  DCB :qnumber_1
+  DCB :_if,  $06
+  DCB :question_1
+  DCB :_while,$16
+  DCB :_while,$15
+  DCB :execute_1
+  DCB :qstack_1
+  DCB :_while,$1c
 
 
 
 colon:
-LDY RSP
-DEY
-LDA IRH
-STA RSTACK,Y
-DEY
-LDA IR
-STA RSTACK,Y
-STY RSP
-LDA WA
-STA IR
-LDA WAH
-STA IRH
-JMP next
+  LDY RSP
+  DEY
+  LDA IRH
+  STA RSTACK,Y
+  DEY
+  LDA IR
+  STA RSTACK,Y
+  STY RSP
+  LDA WA
+  STA IR
+  LDA WAH
+  STA IRH
+  JMP next
 
 semi:
-DCB :semi+$2
-LDY RSP
-LDA RSTACK,Y
-STA IR
-INY
-LDA RSTACK,Y
-STA IRH
-INY
-STY RSP
+  DCB :semi+$2
+  LDY RSP
+  LDA RSTACK,Y
+  STA IR
+  INY
+  LDA RSTACK,Y
+  STA IRH
+  INY
+  STY RSP
 next:
-CLC
-LDY #0
-LDA (IR),Y
-STA WA
-INY
-LDA (IR),Y
-STA WAH
-LDA IR
-ADC #$02
-STA IR
-BCC run
-INC IRH
-CLC
+  CLC
+  LDY #0
+  LDA (IR),Y
+  STA WA
+  INY
+  LDA (IR),Y
+  STA WAH
+  LDA IR
+  ADC #$02
+  STA IR
+  BCC run
+  INC IRH
+  CLC
 run:
-LDA WAH
-STA run_1+$2
-LDA WA
-STA run_1+$1
-ADC #$02
-STA WA
-BCC run_1
-INC WAH
+  LDA WAH
+  STA run_1+$2
+  LDA WA
+  STA run_1+$1
+  ADC #$02
+  STA WA
+  BCC run_1
+  INC WAH
 run_1:
-JMP ($0000)
+  JMP ($0000)
 
 
 
@@ -1159,44 +1160,44 @@ JMP next
 
 
 over:
-DCB $04
-DCB "OVER~"
-DCB :r_right
-over_1:
-DCB :over_1+$2
-LDY SP
-INY
-INY
-LDA DSTACK,Y
-STA $00
-LDA DSTACKH,Y
-STA $01
-LDX #0
-JSR pushDS
-JMP next
+  DCB $04
+  DCB "OVER~"
+  DCB :r_right
+  over_1:
+  DCB :over_1+$2
+  LDY SP
+  INY
+  INY
+  LDA DSTACK,Y
+  STA $00
+  LDA DSTACKH,Y
+  STA $01
+  LDX #0
+  JSR pushDS
+  JMP next
 
 
 drop:
-DCB $04
-DCB "DROP~"
-DCB :over
-drop_1:
-DCB :drop_1+$2
-LDX #0
-JSR popDS
-JMP next
+  DCB $04
+  DCB "DROP~"
+  DCB :over
+  drop_1:
+  DCB :drop_1+$2
+  LDX #0
+  JSR popDS
+  JMP next
 
 dup:
-DCB $03
-DCB "DUP~~"
-DCB :drop
-dup_1:
-DCB :dup_1+$2
-LDX #0
-JSR popDS
-JSR pushDS
-JSR pushDS
-JMP next
+  DCB $03
+  DCB "DUP~~"
+  DCB :drop
+  dup_1:
+  DCB :dup_1+$2
+  LDX #0
+  JSR popDS
+  JSR pushDS
+  JSR pushDS
+  JMP next
 
 rrot:
 DCB $04
