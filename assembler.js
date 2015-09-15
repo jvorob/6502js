@@ -18,6 +18,7 @@ function SimulatorWidget(node) {
   var display = Display();
   var memory = Memory();
   var labels = Labels();
+  var defines = Defines();
   var simulator = Simulator();
   var assembler = Assembler();
   var CODE_START = 0x1200;
@@ -68,6 +69,7 @@ function SimulatorWidget(node) {
   function UI() {
     var currentState;
 
+	//States
     var start = {
       assemble: true,
       run: [false, 'Run'],
@@ -108,6 +110,7 @@ function SimulatorWidget(node) {
     };
 
 
+	//More states/UI stuff
     function setState(state) {
       $node.find('.assembleButton').attr('disabled', !state.assemble);
       if (state.run) {
@@ -286,6 +289,7 @@ function SimulatorWidget(node) {
     var monitoring = false;
     var executeId;
 
+	//Assorted instructions
     //set zero and negative processor flags based on result
     function setNVflags(value) {
       if (value) {
@@ -1657,6 +1661,101 @@ function SimulatorWidget(node) {
     };
   }
 
+  //Handles symbol replacement and also general purpose parsing
+  function Defines() {
+    var defineIndex = [];
+
+    function define(param) {
+      if(!assembler.isFirstPass()) { return true; } //skip defines on second pass
+
+      var name, value;
+      name  = param.replace(/^(\w+).*$/, "$1");
+      value = param.replace(/^\w+\s*(.*)$/, "$1");
+
+      if (lookup(name)) { return false; }
+      defineIndex.push(name + "|" + value);
+      return true;
+    }
+
+    function lookup(name) {
+      var nameAndVal;
+      for (var i = 0; i < defineIndex.length; i++) {
+        nameAndVal = defineIndex[i].split("|");
+		if (name == nameAndVal[0]) { 
+        
+        return nameAndVal[1]; }
+	  }
+      return false;
+    }
+
+    function reset() {
+      defineIndex = [];
+    }
+
+    function parse(param) {
+      var value, label, hilo, addr;
+      var labelval, defineval
+
+      //check if sum expression
+      if (param.match(/\+/)) {
+        var first  = param.replace(/^([^+]*)\+.*/,"$1");
+        var second = param.replace(/^[^+]*\+(.*)/,"$1");
+        first = parse(first);
+        second = parse(second);
+        if(first === null || second === null) { return false; }
+        return first + second;
+      }
+
+      //check if label
+      labelval = labels.getPC(param);
+      if(labelval != -1) {
+        return labelval;
+      }
+
+      //Check if DEFINEd
+      defineval = lookup(param);
+      if(defineval) { 
+        return parse(defineval);
+      }
+
+      if (param.match(/^\$[0-9a-f]+$/i)) {
+        value = parseInt(param.replace(/^#\$/, ""), 16);
+        return value;
+      }
+      if (param.match(/^[0-9]+$/i)) {
+        value = parseInt(param.replace(/^#/, ""), 10);
+        return value;
+      }
+
+      // Label lo/hi
+      if (param.match(/^[<>]\w+$/)) {
+        label = param.replace(/^[<>](\w+)$/, "$1");
+        hilo = param.replace(/^([<>]).*$/, "$1");
+        if (labels.find(label)) {
+          addr = labels.getPC(label);
+          switch(hilo) {
+          case ">":
+            return ((addr >> 8) & 0xff);
+          case "<":
+            return (addr & 0xff);
+          default:
+            return null;
+          }
+        } else {
+          return null;
+        }
+      }
+
+      return null;
+    }
+
+    return {
+      parse: parse,
+      define: define,
+      lookup: lookup,
+      reset: reset
+    };
+  }
 
   function Labels() {
     var labelIndex = [];
@@ -1764,6 +1863,7 @@ function SimulatorWidget(node) {
   function Assembler() {
     var defaultCodePC;
     var codeLen;
+    var isFirstPass = true;
     var codeAssembledOK = false;
 
     var Opcodes = [
@@ -1833,6 +1933,7 @@ function SimulatorWidget(node) {
       simulator.reset();
       labels.reset();
       defaultCodePC = CODE_START;
+      isFirstPass = true;
       $node.find('.messages code').empty();
 
       var code = $node.find('.code').val();
@@ -1851,6 +1952,7 @@ function SimulatorWidget(node) {
       labels.displayMessage();
 
       defaultCodePC = CODE_START;
+      isFirstPass = false;
       message("Assembling code ...");
 
       codeLen = 0;
@@ -1896,7 +1998,6 @@ function SimulatorWidget(node) {
       input = input.replace(/\s+$/, "");
 
       // Find command or label
-
       if (input.match(/^\w+:/)) {
         label = input.replace(/(^\w+):.*$/, "$1");
         if (input.match(/^\w+:[\s]*\w+.*$/)) {
@@ -1917,6 +2018,7 @@ function SimulatorWidget(node) {
 
       command = command.toUpperCase();
 
+      //*=foo
       if (input.match(/^\*\s*=\s*\$?[0-9a-f]*$/)) {
         // equ spotted
         param = input.replace(/^\s*\*\s*=\s*/, "");
@@ -1934,6 +2036,7 @@ function SimulatorWidget(node) {
         return true;
       }
 
+      //General FOO BAR BAZ form
       if (input.match(/^\w+\s+.*?$/)) {
         param = input.replace(/^\w+\s+(.*?)/, "$1");
       } else {
@@ -1944,27 +2047,28 @@ function SimulatorWidget(node) {
         }
       }
 
+      if (command === "DEFINE") { return defines.define(param); }
+
       param = param.replace(/[ ]/g, "");
 
-      if (command === "DCB") {
-        return DCB(param);
-      }
+      if (command === "DCB") { return DCB(param); }
+
 
 
       for (var o = 0; o < Opcodes.length; o++) {
         if (Opcodes[o][0] === command) {
-          if (checkSingle(param, Opcodes[o][11])) { return true; }
-          if (checkImmediate(param, Opcodes[o][1])) { return true; }
-          if (checkZeroPage(param, Opcodes[o][2])) { return true; }
-          if (checkZeroPageX(param, Opcodes[o][3])) { return true; }
-          if (checkZeroPageY(param, Opcodes[o][4])) { return true; }
-          if (checkAbsoluteX(param, Opcodes[o][6])) { return true; }
-          if (checkAbsoluteY(param, Opcodes[o][7])) { return true; }
-          if (checkIndirect(param, Opcodes[o][8])) { return true; }
-          if (checkIndirectX(param, Opcodes[o][9])) { return true; }
+          if (checkSingle   (param, Opcodes[o][11])) { return true; }
+          if (checkImmediate(param, Opcodes[o][1] )) { return true; }
+          if (checkZeroPage (param, Opcodes[o][2] )) { return true; }
+          if (checkZeroPageX(param, Opcodes[o][3] )) { return true; }
+          if (checkZeroPageY(param, Opcodes[o][4] )) { return true; }
+          if (checkAbsoluteX(param, Opcodes[o][6] )) { return true; }
+          if (checkAbsoluteY(param, Opcodes[o][7] )) { return true; }
+          if (checkIndirect (param, Opcodes[o][8] )) { return true; }
+          if (checkIndirectX(param, Opcodes[o][9] )) { return true; }
           if (checkIndirectY(param, Opcodes[o][10])) { return true; }
-          if (checkAbsolute(param, Opcodes[o][5])) { return true; }
-          if (checkBranch(param, Opcodes[o][12])) { return true; }
+          if (checkAbsolute (param, Opcodes[o][5] )) { return true; }
+          if (checkBranch   (param, Opcodes[o][12])) { return true; }
         }
       }
       return false; // Unknown opcode
@@ -1972,21 +2076,28 @@ function SimulatorWidget(node) {
 
     function DCB(param) {
       var values, number, str, ch;
+      if(param.match(/".*"/)) {
+        for(var i = 1; i < param.length - 1; i++) {
+          pushByte(param.charCodeAt(i));
+        }
+        return true;
+      }
+
       values = param.split(",");
       if (values.length === 0) { return false; }
       for (var v = 0; v < values.length; v++) {
         str = values[v];
         if (str) {
           ch = str.substring(0, 1);
-          if (ch === "$") {
-            number = parseInt(str.replace(/^\$/, ""), 16);
-            pushByte(number);
-          } else if (ch >= "0" && ch <= "9") {
-            number = parseInt(str, 10);
-            pushByte(number);
+          if (ch === ":") {
+            number = defines.parse(str.substring(1));
+            if (number === null) { return false; }
+            pushWord(number);
           } else {
-            return false;
-          }
+            number = defines.parse(str);
+            if (number === null) { return false; }
+            pushByte(number);
+          } 
         }
       }
       return true;
@@ -1997,11 +2108,10 @@ function SimulatorWidget(node) {
       var addr;
       if (opcode === null) { return false; }
 
-      addr = -1;
-      if (param.match(/\w+/)) {
-        addr = labels.getPC(param);
-      }
-      if (addr === -1) { pushWord(0x00); return false; }
+      console.log(param);
+      addr = defines.parse(param);
+      if(addr === null) { return false; }
+
       pushByte(opcode);
       if (addr < (defaultCodePC - CODE_START)) {  // Backwards?
         pushByte((0xff - ((defaultCodePC - CODE_START) - addr)) & 0xff);
@@ -2015,54 +2125,28 @@ function SimulatorWidget(node) {
     function checkImmediate(param, opcode) {
       var value, label, hilo, addr;
       if (opcode === null) { return false; }
-      if (param.match(/^#\$[0-9a-f]{1,2}$/i)) {
+
+      if (param.match(/^#/)) {
+        param = param.replace(/^#(.*)$/, "$1");
+        value = defines.parse(param);
+        if (value === null || value < 0 || value > 255) { return false; }
         pushByte(opcode);
-        value = parseInt(param.replace(/^#\$/, ""), 16);
-        if (value < 0 || value > 255) { return false; }
         pushByte(value);
         return true;
-      }
-      if (param.match(/^#[0-9]{1,3}$/i)) {
-        pushByte(opcode);
-        value = parseInt(param.replace(/^#/, ""), 10);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
-      }
-      // Label lo/hi
-      if (param.match(/^#[<>]\w+$/)) {
-        label = param.replace(/^#[<>](\w+)$/, "$1");
-        hilo = param.replace(/^#([<>]).*$/, "$1");
-        pushByte(opcode);
-        if (labels.find(label)) {
-          addr = labels.getPC(label);
-          switch(hilo) {
-          case ">":
-            pushByte((addr >> 8) & 0xff);
-            return true;
-          case "<":
-            pushByte(addr & 0xff);
-            return true;
-          default:
-            return false;
-          }
-        } else {
-          pushByte(0x00);
-          return true;
-        }
-      }
-      return false;
+      } 
+      else { return false; }
     }
 
     // checkIndirect() - Check if param is indirect and push value
     function checkIndirect(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(\$[0-9a-f]{4}\)$/i)) {
+      if (param.match(/^\(.*\)$/)) {
+        param = param.replace(/^\(.*\)$/, "$1");
+        value = defines.parse(param);
+        if (value === null || value < 0 || value > 0xffff) { return false; }
         pushByte(opcode);
-        value = param.replace(/^\(\$([0-9a-f]{4}).*$/i, "$1");
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(parseInt(value, 16));
+        pushWord(value);
         return true;
       }
       return false;
@@ -2072,11 +2156,12 @@ function SimulatorWidget(node) {
     function checkIndirectX(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(\$[0-9a-f]{1,2},X\)$/i)) {
+      if (param.match(/^\(.*,X\)$/)) {
+        param = param.replace(/^\((.*),X\)$/i, "$1");
+        values = defines.parse(param);
+        if (value === null || value < 0 || value > 255) { return false; }
         pushByte(opcode);
-        value = param.replace(/^\(\$([0-9a-f]{1,2}).*$/i, "$1");
-        if (value < 0 || value > 255) { return false; }
-        pushByte(parseInt(value, 16));
+        pushByte(value);
         return true;
       }
       return false;
@@ -2086,11 +2171,12 @@ function SimulatorWidget(node) {
     function checkIndirectY(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\(\$[0-9a-f]{1,2}\),Y$/i)) {
+      if (param.match(/^\(.*\),Y$/)) {
+        param = param.replace(/^\((.*)\),Y$/i, "$1");
+        values = defines.parse(param);
+        if (value === null || value < 0 || value > 255) { return false; }
         pushByte(opcode);
-        value = param.replace(/^\([\$]([0-9a-f]{1,2}).*$/i, "$1");
-        if (value < 0 || value > 255) { return false; }
-        pushByte(parseInt(value, 16));
+        pushByte(value);
         return true;
       }
       return false;
@@ -2109,101 +2195,52 @@ function SimulatorWidget(node) {
     function checkZeroPage(param, opcode) {
       var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{1,2}$/i)) {
-        pushByte(opcode);
-        value = parseInt(param.replace(/^\$/, ""), 16);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
-      }
-      if (param.match(/^[0-9]{1,3}$/i)) {
-        value = parseInt(param, 10);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(opcode);
-        pushByte(value);
-        return true;
-      }
-      return false;
+      value = defines.parse(param);
+      if (value === null ||value < 0 || value > 255) { return false; }
+      pushByte(opcode);
+      pushByte(value);
+      return true;
     }
 
     // checkAbsoluteX() - Check if param is ABSX and push value
     function checkAbsoluteX(param, opcode) {
-      var number, value, addr;
+      var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{3,4},X$/i)) {
+      if (param.match(/^[^()]*,X$/i)) {
+        param = param.replace(/^(.*),X$/i, "$1");
+        value = defines.parse(param);
+        if (value === null || value < 0 || value > 0xffff) { return false; }
         pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]*),X/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 0xffff) { return false; }
         pushWord(value);
         return true;
       }
-
-      if (param.match(/^\w+,X$/i)) {
-        param = param.replace(/,X$/i, "");
-        pushByte(opcode);
-        if (labels.find(param)) {
-          addr = labels.getPC(param);
-          if (addr < 0 || addr > 0xffff) { return false; }
-          pushWord(addr);
-          return true;
-        } else {
-          pushWord(0x1234);
-          return true;
-        }
-      }
-
       return false;
     }
 
     // checkAbsoluteY() - Check if param is ABSY and push value
     function checkAbsoluteY(param, opcode) {
-      var number, value, addr;
+      var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{3,4},Y$/i)) {
+      if (param.match(/^[^()]*,Y$/i)) {
+        param = param.replace(/^(.*),Y$/i, "$1");
+        value = defines.parse(param);
+        if (value === null || value < 0 || value > 0xffff) { return false; }
         pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]*),Y/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 0xffff) { return false; }
         pushWord(value);
         return true;
-      }
-
-      // it could be a label too..
-
-      if (param.match(/^\w+,Y$/i)) {
-        param = param.replace(/,Y$/i, "");
-        pushByte(opcode);
-        if (labels.find(param)) {
-          addr = labels.getPC(param);
-          if (addr < 0 || addr > 0xffff) { return false; }
-          pushWord(addr);
-          return true;
-        } else {
-          pushWord(0x1234);
-          return true;
-        }
       }
       return false;
     }
 
     // checkZeroPageX() - Check if param is ZPX and push value
     function checkZeroPageX(param, opcode) {
-      var number, value;
+      var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{1,2},X/i)) {
+      if (param.match(/^[^()]*,X$/i)) {
+        param = param.replace(/^(.*),X$/i, "$1");
+        value = defines.parse(param);
+        if (value === null || value < 0 || value > 255) { return false; }
         pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]{1,2}),X/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
-      }
-      if (param.match(/^[0-9]{1,3},X/i)) {
-        pushByte(opcode);
-        number = param.replace(/^([0-9]{1,3}),X/i, "$1");
-        value = parseInt(number, 10);
-        if (value < 0 || value > 255) { return false; }
         pushByte(value);
         return true;
       }
@@ -2211,21 +2248,13 @@ function SimulatorWidget(node) {
     }
 
     function checkZeroPageY(param, opcode) {
-      var number, value;
+      var value;
       if (opcode === null) { return false; }
-      if (param.match(/^\$[0-9a-f]{1,2},Y/i)) {
+      if (param.match(/^[^()]*,Y$/i)) {
+        param = param.replace(/^(.*),Y$/i, "$1");
+        value = defines.parse(param);
+        if (value === null || value < 0 || value > 255) { return false; }
         pushByte(opcode);
-        number = param.replace(/^\$([0-9a-f]{1,2}),Y/i, "$1");
-        value = parseInt(number, 16);
-        if (value < 0 || value > 255) { return false; }
-        pushByte(value);
-        return true;
-      }
-      if (param.match(/^[0-9]{1,3},Y/i)) {
-        pushByte(opcode);
-        number = param.replace(/^([0-9]{1,3}),Y/i, "$1");
-        value = parseInt(number, 10);
-        if (value < 0 || value > 255) { return false; }
         pushByte(value);
         return true;
       }
@@ -2234,34 +2263,13 @@ function SimulatorWidget(node) {
 
     // checkAbsolute() - Check if param is ABS and push value
     function checkAbsolute(param, opcode) {
-      var value, number, addr;
+      var value;
       if (opcode === null) { return false; }
+      value = defines.parse(param);
+      if (value === null || value < 0 || value > 0xffff) { return false; }
       pushByte(opcode);
-      if (param.match(/^\$[0-9a-f]{3,4}$/i)) {
-        value = parseInt(param.replace(/^\$/, ""), 16);
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(value);
-        return true;
-      }
-      if (param.match(/^[0-9]{1,5}$/i)) {  // Thanks, Matt!
-        value = parseInt(param, 10);
-        if (value < 0 || value > 0xffff) { return false; }
-        pushWord(value);
-        return(true);
-      }
-      // it could be a label too..
-      if (param.match(/^\w+$/)) {
-        if (labels.find(param)) {
-          addr = (labels.getPC(param));
-          if (addr < 0 || addr > 0xffff) { return false; }
-          pushWord(addr);
-          return true;
-        } else {
-          pushWord(0x1234);
-          return true;
-        }
-      }
-      return false;
+      pushWord(value);
+      return true;
     }
 
     // pushByte() - Push byte to memory
@@ -2468,7 +2476,10 @@ function SimulatorWidget(node) {
         return defaultCodePC;
       },
       hexdump: hexdump,
-      disassemble: disassemble
+      disassemble: disassemble,
+      isFirstPass: function () {
+        return isFirstPass;
+      }
     };
   }
 

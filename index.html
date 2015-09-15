@@ -71,5 +71,25 @@ $f: Light grey
     <script src="es5-shim.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="assembler.js"></script>
+
+
+	<script type="text/javascript">
+		{
+			var ajaxcallback = function(foo) {
+			   codebox = document.getElementsByClassName("code");
+			   codebox = codebox.item(0);
+			   codebox.value = foo;
+			}
+			var xmlhttp = new XMLHttpRequest();
+			xmlhttp.onreadystatechange = function(){
+				if (xmlhttp.readyState == 4 && xmlhttp.status == 200){
+					ajaxcallback(xmlhttp.responseText);
+				}
+			}
+			xmlhttp.open("GET", "mos.txt", true);
+			xmlhttp.send();
+		}
+	</script>
+
   </body>
 </html>

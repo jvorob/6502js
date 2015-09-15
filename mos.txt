@@ -1,0 +1,2264 @@
+define buff $10
+define max_buff_size $50
+define buff_size $61
+define buff_pos $62
+define curs_l $63
+define curs_h $64
+define heap_l $65
+define heap_h $66
+define D_BMP_L $e0
+define D_BMP_H $e1
+define D_0 $e2
+define D_1 $e3
+define P0L $90
+define P0H $91
+define P1L $92
+define P1H $93
+define IR      $a0
+define IRH      $a1
+define WA      $a2
+define WAH      $a3
+define CONTEXT $a4
+define CONTEXTH $a5
+define CURRENT $a6
+define CURRENTH $a7
+define DP      $a8
+define DPH      $a9
+define BASE    $aa
+define SP      $ab
+define RSP     $ac
+define MODE    $ad
+define esc_char $5c
+
+
+
+init:
+JMP forth_start
+get_line:
+JSR clear_buff
+get_line_loop:
+JSR get_key
+CMP #esc_char
+BNE get_line_end
+JSR handle_escape
+JMP get_line_loop
+get_line_end:
+JSR type_char
+JMP get_line_loop
+
+
+handle_escape:
+JSR get_key
+CMP #$63
+BEQ he_c
+CMP #$64
+BEQ he_d
+CMP #$65
+BEQ he_e
+CMP #$68
+BEQ he_h
+CMP #$6a
+BEQ he_j
+CMP #$6b
+BEQ he_k
+CMP #$6c
+BEQ he_l
+CMP #$72
+BEQ he_r
+CMP #$73
+BEQ he_s
+RTS
+
+
+he_e:
+PLA
+PLA
+RTS
+
+he_h:
+JSR he_s
+JSR reset_cursor
+LDA #<help_string
+STA P0L
+LDA #>help_string
+STA P0H
+LDA #$50
+JSR draw_string
+JSR get_key
+JSR he_l
+RTS
+
+he_d:
+LDX buff_pos
+BEQ he_d_end
+DEX
+STX buff_pos
+LDY #$00
+STY buff,X
+JSR cursor_back
+LDA #$20
+JSR clear_char
+he_d_end:
+RTS
+
+he_c:
+JMP clear_entry
+he_j:
+LDA #1
+JSR scroll_up_all
+RTS
+he_k:
+RTS
+
+he_l:
+JSR clear_screen
+LDA $0e
+STA $02
+LDA $0f
+STA $03
+LDA #buff
+STA $00
+LDA #0
+STA $01
+LDA #$50
+JSR strncpy
+STA buff_pos
+JSR he_r
+RTS
+
+he_r:
+JSR redraw_buff
+RTS
+he_s:
+LDA #0
+STA $01
+LDA #buff
+STA $00
+JSR strlen
+CLC
+ADC #1
+JSR malloc
+LDA #buff
+STA $02
+LDA #0
+STA $03
+LDA buff_size
+JSR strncpy
+LDA $01
+STA $0f
+LDA $00
+STA $0e
+LDA heap_l
+STA $00
+LDA heap_h
+STA $01
+LDY #04
+LDA ($00),Y
+STA $08
+INY
+LDA ($00),Y
+STA $09
+RTS
+
+
+
+get_key:
+SEC
+JSR cursor_flash
+poll_keys:
+LDA $ff
+BNE poll_keys_continue
+INY
+NOP
+NOP
+BNE poll_keys
+ROL
+EOR #1
+LSR
+JSR cursor_flash
+JMP poll_keys
+poll_keys_continue:
+LDX #0
+STX $ff
+PHA
+JSR cursor_clear
+PLA
+RTS
+
+
+cursor_clear:
+CLC
+;sets cursor to carry bit, preserves carry
+cursor_flash:
+LDA curs_h
+STA $01
+LDA #$c0
+STA $00
+LDY curs_l
+LDX #5
+LDA #0
+ROL
+cursor_flash_loop:
+STA ($00),Y
+INY
+DEX
+BNE cursor_flash_loop
+LSR
+RTS
+
+
+
+lookup_key:
+SEC
+SBC #$20
+BPL lookup_key_1
+LDA #$20
+lookup_key_1:
+CMP #50
+BCS lookup_key_p2
+LDX #>keytable1
+STX D_BMP_H
+BMI lookup_key_2
+lookup_key_p2:
+LDX #>keytable2
+STX D_BMP_H
+SEC
+SBC #50
+lookup_key_2:
+STA D_BMP_L
+ASL A
+ASL A
+CLC
+ADC D_BMP_L
+STA D_BMP_L
+RTS
+
+
+draw_char:
+STA D_1
+TXA
+PHA
+TYA
+PHA
+LDA D_1
+JSR lookup_key
+LDA curs_h
+CMP #$12
+BCS dc_end
+STA dc_l_c1+$02
+STA dc_l_c2+$02
+STA dc_l_c3+$02
+STA dc_l_c4+$02
+STA dc_l_c5+$02
+STA dc_l_c6+$02
+STA dc_l_c7+$02
+STA dc_l_c8+$02
+LDY #$00
+LDX curs_l
+dc_loop_across:
+LDA (D_BMP_L),Y
+STA D_0
+CLC
+LDA #$80
+AND D_0
+BEQ dc_l_c1
+LDA #$01
+dc_l_c1:
+STA $0000,X
+LDA #$40
+AND D_0
+BEQ dc_l_c2
+LDA #$01
+dc_l_c2:
+STA $0020,X
+LDA #$20
+AND D_0
+BEQ dc_l_c3
+LDA #$01
+dc_l_c3:
+STA $0040,X
+LDA #$10
+AND D_0
+BEQ dc_l_c4
+LDA #$01
+dc_l_c4:
+STA $0060,X
+LDA #$08
+AND D_0
+BEQ dc_l_c5
+LDA #$01
+dc_l_c5:
+STA $0080,X
+LDA #$04
+AND D_0
+BEQ dc_l_c6
+LDA #$01
+dc_l_c6:
+STA $00a0,X
+LDA #$02
+AND D_0
+BEQ dc_l_c7
+LDA #$01
+dc_l_c7:
+STA $00c0,X
+LDA #$01
+AND D_0
+BEQ dc_l_c8
+LDA #$01
+dc_l_c8:
+STA $00e0,X
+INY
+INX
+CPY #$05
+BNE dc_loop_across
+dc_end:
+PLA
+TAY
+PLA
+TAX
+RTS
+
+
+clear_char:
+LDY #$04
+CLC
+cc_loop:
+LDA #$00
+STA (curs_l),Y
+DEY
+STA (curs_l),Y
+DEY
+STA (curs_l),Y
+DEY
+STA (curs_l),Y
+DEY
+STA (curs_l),Y
+TYA
+ADC #$24
+TAY
+BCC cc_loop
+RTS
+
+clear_buff:
+LDA #0
+LDX #max_buff_size
+cb_loop:
+DEX
+STA buff,X
+BNE cb_loop
+STA buff_pos
+RTS
+
+clear_entry:
+LDX buff_pos
+BNE ce_loop
+RTS
+ce_loop:
+LDA #0
+STA buff,X
+JSR cursor_back
+JSR clear_char
+DEX
+BNE ce_loop
+LDA #0
+STA buff_pos
+RTS
+
+clear_screen:
+CLC
+LDX #$02
+TXA
+cs_loop:
+JSR clear_page
+INX
+TXA
+CMP #$12
+BNE cs_loop
+cs_end:
+RTS
+
+clear_page:
+STA cp_loop+$4
+STA cp_loop+$7
+STA cp_loop+$0a
+STA cp_loop+$0d
+STA cp_loop+$10
+STA cp_loop+$13
+STA cp_loop+$16
+STA cp_loop+$19
+STA cp_loop+$1c
+STA cp_loop+$1f
+STA cp_loop+$22
+STA cp_loop+$25
+STA cp_loop+$28
+STA cp_loop+$2b
+STA cp_loop+$2e
+STA cp_loop+$31
+LDY #$00
+cp_loop:
+LDA #0
+STA $0000,Y
+STA $0001,Y
+STA $0002,Y
+STA $0003,Y
+STA $0004,Y
+STA $0005,Y
+STA $0006,Y
+STA $0007,Y
+STA $0008,Y
+STA $0009,Y
+STA $000a,Y
+STA $000b,Y
+STA $000c,Y
+STA $000d,Y
+STA $000e,Y
+STA $000f,Y
+TYA
+ADC #$10
+TAY
+BNE cp_loop
+RTS
+
+scroll_up_all:
+ASL
+STA D_0
+LDA #$10
+SEC
+SBC D_0
+ADC #1
+STA D_1
+LDA #$2
+scroll_up_all_1:
+PHA
+JSR scroll_up
+PLA
+CLC
+ADC #$02
+CMP D_1
+BNE scroll_up_all_1
+CLC
+scroll_up_all_2:
+CMP #$12
+BEQ scroll_up_all_end
+PHA
+JSR clear_page
+PLA
+CLC
+ADC #$1
+BNE scroll_up_all_2
+scroll_up_all_end:
+RTS
+
+
+scroll_up:
+AND #$fe
+CLC
+TAX
+su_prepare_pages:
+TXA
+STA su_loop+$5
+STA su_loop+$b
+STA su_loop+$11
+STA su_loop+$17
+STA su_loop+$1d
+STA su_loop+$23
+STA su_loop+$29
+STA su_loop+$2f
+ADC D_0
+STA su_loop+$2
+STA su_loop+$8
+STA su_loop+$e
+STA su_loop+$14
+STA su_loop+$1a
+STA su_loop+$20
+STA su_loop+$26
+STA su_loop+$2c
+LDY #$00
+su_loop:
+LDA $0000,Y
+STA $0000,Y
+LDA $0001,Y
+STA $0001,Y
+LDA $0002,Y
+STA $0002,Y
+LDA $0003,Y
+STA $0003,Y
+LDA $0004,Y
+STA $0004,Y
+LDA $0005,Y
+STA $0005,Y
+LDA $0006,Y
+STA $0006,Y
+LDA $0007,Y
+STA $0007,Y
+TYA
+ADC #$08
+TAY
+BNE su_loop
+TXA
+ADC #0
+TAX
+AND #$01
+BEQ su_end
+JMP su_prepare_pages
+su_end:
+RTS
+
+type_char:
+STA $00
+LDA buff_pos
+CMP buff_size
+BNE type_char_1
+RTS
+type_char_1:
+LDA $00
+LDX buff_pos
+STA buff,X
+INC buff_pos
+LDA curs_h
+CMP #$12
+BCC type_char_2
+JSR newline
+type_char_2:
+LDA $00
+JSR draw_char
+JSR cursor_fwd
+RTS
+
+
+redraw_buff:
+JSR reset_cursor
+LDA #buff
+STA P0L
+LDA #0
+STA P0H
+LDA buff_size
+JSR draw_string
+RTS
+
+
+draw_string:
+LDY #0
+TAX
+BEQ draw_string_end
+draw_string_loop:
+LDA (P0L),Y
+BEQ draw_string_end
+JSR draw_char
+JSR cursor_fwd
+INY
+DEX
+BNE draw_string_loop
+draw_string_end:
+TYA
+RTS
+
+
+reset_cursor:
+PHA
+LDA #$02
+STA curs_l
+STA curs_h
+PLA
+RTS
+
+cursor_fwd:
+LDA curs_h
+CMP #$12
+BCS cursor_fwd_end
+LDA curs_l
+CLC
+ADC #$06
+CMP #27
+BMI cursor_fwd_2
+LDA curs_h
+ADC #0
+STA curs_h
+AND #$01
+EOR #$01
+ASL A
+cursor_fwd_2:
+STA curs_l
+cursor_fwd_end:
+RTS
+
+cursor_back:
+LDA curs_l
+SEC
+SBC #$06
+BPL cursor_back_skip
+LDA #25
+DEC curs_h
+LDA curs_h
+AND #$01
+EOR #$01
+ASL A
+CLC
+ADC #$18
+cursor_back_skip:
+STA curs_l
+RTS
+
+
+freshline:
+LDA curs_l
+CMP #2
+BNE newline
+RTS
+
+newline:
+LDA #$02
+STA curs_l
+CLC
+ADC curs_h
+AND #$fe
+CMP #$12
+BMI newline_1
+LDA #4
+JSR scroll_up_all
+LDA #$a
+newline_1:
+STA curs_h
+RTS
+
+reset_heap:
+LDA #$b0
+STA heap_h
+LDA #$00
+STA heap_l
+LDA #0
+STA $b000
+LDA #0
+STA $b001
+LDA #heap_l
+STA $b002
+LDA #0
+STA $b003
+LDA #0
+STA $b004
+LDA #$20
+STA $b005
+RTS
+
+malloc:
+TAX
+INX
+TXA
+CMP #$06
+BCS mal2
+LDA #$06
+mal2:
+STA $02
+LDA heap_l
+STA $00
+LDA heap_h
+STA $01
+LDX #$00
+mal_wlk_loop:
+LDY #$04
+LDA ($00),Y
+CMP $02
+BCS mal_split2
+INY
+LDA ($00),Y
+BNE mal_split
+JSR walk_fwd
+JMP mal_wlk_loop
+mal_split:
+DEY
+LDA ($00),Y
+mal_split2:
+SEC
+SBC $02
+STA ($00),Y
+PHA
+INY
+BCS mal_split3
+LDA ($00),Y
+SBC #0
+STA ($00),Y
+mal_split3:
+PLA
+CLC
+ADC $00
+PHA
+LDA ($00),Y
+ADC $01
+STA $01
+PLA
+STA $00
+DEC $02
+LDA $02
+STA ($00,X)
+INC $00
+BNE mal_split4
+INC $01
+mal_split4:
+RTS
+
+walk_fwd:
+PHA
+LDA ($00,X)
+PHA
+INC $00,X
+BNE wf2
+INC $01,X
+wf2:
+LDA ($00,X)
+BEQ end
+STA $01,X
+PLA
+STA $00,X
+PLA
+RTS
+
+strncpy:
+TAX
+BEQ strncpy_end
+LDY #0
+strncpy_loop:
+LDA ($02),Y
+STA ($00),Y
+BEQ strncpy_end
+INY
+DEX
+BNE strncpy_loop
+BEQ strncpy_end
+strncpy_end:
+TYA
+RTS
+
+strlen:
+LDY #0
+strlen_loop:
+LDA ($00),Y
+BEQ strlen_end
+INY
+BNE strlen_loop
+JMP end
+strlen_end:
+TYA
+RTS
+
+end:
+LDA #$CD
+TAX
+TXS
+PLA
+TAX
+PLA
+TAY
+LDA #$AB
+end2:
+JMP end2
+JMP $feeb
+NOP
+NOP
+NOP
+
+
+help_string:
+DCB "Help:     \d bkspc  \c clrscrn\h help   \s savscrn\l ld scrn"
+DCB $00
+
+make_uppercase:
+CMP #$7b
+BPL mu_end
+CMP #$61
+BMI mu_end
+SBC #$20
+mu_end:
+RTS
+
+zero_cmp:
+LDX #0
+STX $02
+STX $03
+BEQ stack_cmp_1
+stack_cmp:
+LDX #2
+JSR popDS
+LDX #0
+stack_cmp_1:
+JSR popDS
+LDA $01
+CMP $03
+BNE stack_cmp_end
+LDA $00
+CMP $02
+stack_cmp_end:
+PHP
+LDA $01
+EOR $03
+AND #$80
+BEQ stack_cmp_end_2
+LDA #1
+TSX
+EOR $101,X
+STA $101,X
+stack_cmp_end_2:
+PLP
+RTS
+
+_two_comp:
+LDA $01,X
+EOR #$ff
+STA $01
+LDA $00,X
+EOR #$ff
+CLC
+ADC #1
+STA $00,X
+BNE _two_comp_end
+INC $01,X
+_two_comp_end:
+RTS
+
+divide:
+LDX #0
+STX $03
+STX $04
+STX $05
+STX $06
+LDY #$10
+LDA $01
+BMI divide_loop
+divide_zero_loop:
+DEY
+BEQ divide_loop
+ASL $00
+ROL $01
+BPL divide_zero_loop
+divide_loop:
+ASL $00
+ROL $01
+LDA $05
+ROL
+STA $05
+SEC
+SBC $02
+BCC divide_rem_skip
+STA $05
+divide_rem_skip:
+ROL $03
+ROL $04
+DEY
+BNE divide_loop
+RTS
+
+multiply:
+LDA $00
+STA $02
+LDA $01
+STA $03
+LDA $04
+LDX #$08
+LDA $04
+multiply_zero_loop:
+ASL
+BCS multiply_dbl
+DEX
+BCC multiply_zero_loop
+BEQ multiply_end
+multiply_loop:
+ASL
+BCC multiply_dbl
+STA $04
+CLC
+LDA $00
+ADC $02
+STA $00
+LDA $01
+ADC $03
+STA $01
+LDA $04
+multiply_dbl:
+DEX
+BEQ multiply_end
+ASL $00
+ROL $01
+BCC multiply_loop
+multiply_end:
+RTS
+
+popDS:
+LDY SP
+BNE popDS_notoverflow
+LDA MODE
+ORA #$02
+STA MODE
+popDS_notoverflow:
+LDA DSTACK,Y
+STA $00,X
+INY
+LDA DSTACK,Y
+STA $01,X
+INY
+STY SP
+RTS
+
+popRS:
+LDY RSP
+LDA RSTACK,Y
+STA $00,X
+INY
+LDA RSTACK,Y
+STA $01,X
+INY
+STY RSP
+RTS
+
+pushByte:
+LDY SP
+DEY
+DEY
+STA DSTACK,Y
+LDA #0
+STA DSTACKH,Y
+STY SP
+RTS
+
+pushDS:
+LDY SP
+DEY
+LDA $01,X
+STA DSTACK,Y
+DEY
+LDA $00,X
+STA DSTACK,Y
+STY SP
+RTS
+
+pushRS:
+LDY RSP
+DEY
+LDA $01,X
+STA RSTACK,Y
+DEY
+LDA $00,X
+STA RSTACK,Y
+STY RSP
+RTS
+
+fetch:
+LDA ($00,X)
+PHA
+INC $00,X
+LDA ($00,X)
+STA $00,X
+PLA
+STA $00,X
+RTS
+
+
+_if:
+DCB :_if+$2
+LDX #0
+JSR popDS
+LDA $00
+ORA $01
+BEQ _if_f
+INC IR
+BEQ _if_incirh
+JMP next
+_if_f:
+LDA (IR,X)
+CLC
+ADC IR
+STA IR
+BCS _if_incirh
+JMP next
+_if_incirh:
+INC IRH
+JMP next
+
+_end:
+DCB :_end+$2
+LDX #0
+JSR popDS
+LDA $00
+ORA $01
+BEQ _while+$2
+INC IR
+BEQ _if_incirh
+JMP next
+
+_while:
+DCB :_while+$2
+LDA IR
+SEC
+LDX #0
+SBC (IR,X)
+STA IR
+BCC _while_decirh
+JMP next
+_while_decirh:
+DEC IRH
+JMP next
+
+_litnum:
+DCB :_litnum+$2
+LDY #1
+LDA (IR),Y
+STA $01
+DEY
+LDA (IR),Y
+STA $00
+LDX #0
+JSR pushDS
+LDA IR
+CLC
+ADC #2
+STA IR
+BCS _if_incirh
+JMP next
+
+_clitnum:
+DCB :_clitnum+$2
+LDX #0
+STX $01
+LDA (IR,X)
+STA $00
+JSR pushDS
+INC IR
+BEQ _if_incirh
+JMP next
+
+_patch:
+DCB :_patch+$2
+LDX #WA
+JSR popDS
+JMP forth_start
+
+
+
+*=$d000
+startmsg:
+DCB $0a
+DCB "FORSH 0.1:"
+
+restartmsg:
+DCB $08
+DCB "RESHTART"
+
+stackmsg:
+DCB $0a
+DCB "STK UNDRFL"
+
+okmsg:
+DCB $03
+DCB " OK"
+
+
+
+outer_interp:
+DCB :type_1
+DCB :inline_1
+DCB :aspace_1
+DCB :token_1
+DCB :search_1
+DCB :_if,$0e
+DCB :qnumber_1
+DCB :_if,  $06
+DCB :question_1
+DCB :_while,$16
+DCB :_while,$15
+DCB :execute_1
+DCB :qstack_1
+DCB :_while,$1c
+
+
+
+colon:
+LDY RSP
+DEY
+LDA IRH
+STA RSTACK,Y
+DEY
+LDA IR
+STA RSTACK,Y
+STY RSP
+LDA WA
+STA IR
+LDA WAH
+STA IRH
+JMP next
+
+semi:
+DCB :semi+$2
+LDY RSP
+LDA RSTACK,Y
+STA IR
+INY
+LDA RSTACK,Y
+STA IRH
+INY
+STY RSP
+next:
+CLC
+LDY #0
+LDA (IR),Y
+STA WA
+INY
+LDA (IR),Y
+STA WAH
+LDA IR
+ADC #$02
+STA IR
+BCC run
+INC IRH
+CLC
+run:
+LDA WAH
+STA run_1+$2
+LDA WA
+STA run_1+$1
+ADC #$02
+STA WA
+BCC run_1
+INC WAH
+run_1:
+JMP ($0000)
+
+
+
+execute:
+DCB $07
+DCB "EXECU"
+DCB $00,$00
+execute_1:
+DCB :execute_1+$2
+LDX #WA
+JSR popDS
+CLC
+JMP run
+
+
+r_left:
+DCB $2
+DCB "<R~~~"
+DCB :execute
+r_left_1:
+DCB :r_left_1+$2
+LDX #0
+JSR popDS
+JSR pushRS
+JMP next
+
+
+r_right:
+DCB $2
+DCB "R>~~~"
+DCB :r_left
+r_right_1:
+DCB :r_right_1+$2
+LDX #0
+JSR popRS
+JSR pushDS
+JMP next
+
+
+over:
+DCB $04
+DCB "OVER~"
+DCB :r_right
+over_1:
+DCB :over_1+$2
+LDY SP
+INY
+INY
+LDA DSTACK,Y
+STA $00
+LDA DSTACKH,Y
+STA $01
+LDX #0
+JSR pushDS
+JMP next
+
+
+drop:
+DCB $04
+DCB "DROP~"
+DCB :over
+drop_1:
+DCB :drop_1+$2
+LDX #0
+JSR popDS
+JMP next
+
+dup:
+DCB $03
+DCB "DUP~~"
+DCB :drop
+dup_1:
+DCB :dup_1+$2
+LDX #0
+JSR popDS
+JSR pushDS
+JSR pushDS
+JMP next
+
+rrot:
+DCB $04
+DCB "RROT~"
+DCB :dup
+rrot_1:
+DCB :rrot_1+$2
+LDY SP
+TYA
+CLC
+ADC #$04
+TAX
+LDA DSTACK,X
+STA $00
+LDA DSTACKH,X
+STA $01
+LDA DSTACK,Y
+STA DSTACK,X
+LDA DSTACKH,Y
+STA DSTACKH,X
+DEX
+DEX
+LDA DSTACK,X
+STA DSTACK,Y
+LDA DSTACKH,X
+STA DSTACKH,Y
+LDA $00
+STA DSTACK,X
+LDA $01
+STA DSTACKH,X
+JMP next
+
+lrot:
+DCB $04
+DCB "LROT~"
+DCB :rrot
+lrot_1:
+DCB :lrot_1+$2
+LDX SP
+LDA DSTACK,X
+STA $00
+LDA DSTACKH,X
+STA $01
+TXA
+CLC
+ADC #$04
+TAY
+LDA DSTACK,Y
+STA DSTACK,X
+LDA DSTACKH,Y
+STA DSTACKH,X
+INX
+INX
+LDA DSTACK,X
+STA DSTACK,Y
+LDA DSTACKH,X
+STA DSTACKH,Y
+LDA $00
+STA DSTACK,X
+LDA $01
+STA DSTACKH,X
+JMP next
+
+swap:
+DCB $04
+DCB "SWAP~"
+DCB :lrot
+swap_1:
+DCB :swap_1+$2
+LDX #0
+JSR popDS
+LDX #2
+JSR popDS
+LDX #0
+JSR pushDS
+LDX #2
+JSR pushDS
+JMP next
+
+and:
+DCB $03
+DCB "AND~~"
+DCB :swap
+and_1:
+DCB :and_1+$2
+LDX #0
+JSR popDS
+LDY SP
+LDA $00
+AND DSTACK,Y
+STA DSTACK,Y
+LDA $01
+AND DSTACKH,Y
+STA DSTACKH,Y
+JMP next
+
+not:
+DCB $03
+DCB "NOT~~"
+DCB :and
+not_1:
+DCB :not_1+$2
+LDX #0
+JSR popDS
+LDA $00
+ORA $01
+BEQ not_f
+LDA #0
+BEQ not_end
+not_f:
+LDA #1
+not_end:
+STA $00
+STX $01
+JSR pushDS
+JMP next
+
+modslash:
+DCB $04
+DCB "MOD/~"
+DCB :not
+modslash_1:
+DCB :modslash_1+$2
+LDX #2
+JSR popDS
+LDX #0
+JSR popDS
+JSR divide
+LDX #$03
+JSR pushDS
+LDX #$05
+JSR pushDS
+JMP next
+
+slash:
+DCB $01
+DCB "/~~~~"
+DCB :modslash
+slash_1:
+DCB :slash_1+$2
+LDX #2
+JSR popDS
+LDX #0
+JSR popDS
+JSR divide
+LDX #$03
+JSR pushDS
+JMP next
+
+star:
+DCB $01
+DCB "*~~~~"
+DCB :slash
+star_1:
+DCB :star_1+$2
+LDX #4
+JSR popDS
+LDX #0
+JSR popDS
+JSR multiply
+LDX #0
+JSR pushDS
+JMP next
+
+bang:
+DCB $01
+DCB "!~~~~"
+DCB :star
+bang_1:
+DCB :bang_1+$2
+LDX #2
+JSR popDS
+LDX #0
+JSR popDS
+LDA $00
+STA ($02,X)
+INY
+LDA $01
+STA ($02,X)
+JMP next
+
+cbang:
+DCB $02
+DCB "C!~~~"
+DCB :bang
+cbang_1:
+DCB :cbang_1+$2
+LDX #2
+JSR popDS
+LDX #0
+JSR popDS
+LDA $00
+STA ($02,X)
+JMP next
+
+at:
+DCB $01
+DCB "@~~~~"
+DCB :cbang
+at_1:
+DCB :at_1+$2
+LDX SP
+LDA DSTACK,X
+STA $00
+LDA DSTACKH,X
+STA $01
+LDY #0
+LDA ($00),Y
+STA DSTACK,X
+INY
+LDA ($00),Y
+STA DSTACKH,X
+JMP next
+
+cat:
+DCB $02
+DCB "C@~~~"
+DCB :at
+cat_1:
+DCB :cat_1+$2
+LDX SP
+LDA DSTACK,X
+STA $00
+LDA DSTACKH,X
+STA $01
+LDA #0
+STA DSTACKH,X
+TAY
+LDA ($00),Y
+STA DSTACK,X
+JMP next
+
+plus:
+DCB $01
+DCB "+~~~~"
+DCB :cat
+plus_1:
+DCB :plus_1+$2
+LDX #2
+JSR popDS
+LDX #0
+JSR popDS
+CLC
+LDA $02
+ADC $00
+STA $00
+LDA $03
+ADC $01
+STA $01
+JSR pushDS
+JMP next
+
+minus:
+DCB $01
+DCB "-~~~~"
+DCB :plus
+minus_1:
+DCB :minus_1+$2
+LDX #2
+JSR popDS
+LDX #0
+JSR popDS
+SEC
+LDA $00
+SBC $02
+STA $00
+LDA $01
+SBC $03
+STA $01
+JSR pushDS
+JMP next
+
+twocomp:
+DCB $5
+DCB "2COMP"
+DCB :minus
+twocomp_1:
+DCB :twocomp_1+$2
+LDX #0
+JSR popDS
+JSR _two_comp
+JSR pushDS
+JMP next
+
+abs:
+DCB $3
+DCB "ABS~~"
+DCB :twocomp
+abs_1:
+DCB :abs_1+$2
+LDY SP
+LDA DSTACKH,Y
+BPL abs_end
+LDX #0
+JSR popDS
+JSR _two_comp
+JSR pushDS
+abs_end:
+JMP next
+
+eq:
+DCB $1
+DCB "=~~~~"
+DCB :abs
+eq_1:
+DCB :eq_1+$2
+JSR stack_cmp
+BNE cmp_f
+BEQ cmp_t
+
+lt:
+DCB $1
+DCB "<~~~~"
+DCB :eq
+lt_1:
+DCB :lt_1+$2
+JSR stack_cmp
+BCS cmp_f
+BCC cmp_t
+
+gt:
+DCB $1
+DCB ">~~~~"
+DCB :lt
+gt_1:
+DCB :gt_1+$2
+JSR stack_cmp
+BCC cmp_f
+BEQ cmp_f
+BCS cmp_t
+
+lte:
+DCB $2
+DCB "<=~~~"
+DCB :gt
+lte_1:
+DCB :lte_1+$2
+JSR stack_cmp
+BCC cmp_t
+BEQ cmp_t
+BCS cmp_f
+
+
+cmp_f:
+LDA #0
+JSR pushByte
+JMP next
+
+cmp_t:
+LDA #1
+JSR pushByte
+JMP next
+
+
+gte:
+DCB $2
+DCB ">=~~~"
+DCB :lte
+gte_1:
+DCB :gte_1+$2
+JSR stack_cmp
+BCC cmp_f
+BCS cmp_t
+
+zero_eq:
+DCB $2
+DCB "0=~~~"
+DCB :gte
+zero_eq_1:
+DCB :zero_eq_1+$2
+JSR zero_cmp
+BEQ cmp_t
+BNE cmp_f
+
+zero_lt:
+DCB $2
+DCB "0<~~~"
+DCB :zero_eq
+zero_lt_1:
+DCB :zero_lt_1+$2
+JSR zero_cmp
+BCC cmp_t
+BCS cmp_f
+
+constant:
+DCB $08
+DCB "CONST"
+DCB :zero_lt
+constant_1:
+DCB :colon
+DCB :semi
+constant_scode:
+LDY #1
+LDA (WA),Y
+STA $01
+DEY
+LDA (WA),Y
+STA $00
+LDX #0
+JSR pushDS
+JMP next
+
+variable:
+DCB $08
+DCB "VARIA"
+DCB :constant
+variable_1:
+DCB :colon
+DCB :semi
+variable_scode:
+LDX #WA
+JSR pushDS
+JMP next
+
+base_var:
+DCB $04
+DCB "BASE~"
+DCB :variable
+base_var_1:
+DCB :constant_scode
+DCB BASE,$00
+
+sp_var:
+DCB $02
+DCB "SP~~~"
+DCB :base_var
+sp_var_1:
+DCB :constant_scode
+DCB SP,$00
+
+rsp_var:
+DCB $03
+DCB "RSP~~"
+DCB :sp_var
+rsp_var_1:
+DCB :constant_scode
+DCB RSP,$00
+
+sp_base:
+DCB $03
+DCB "SPB~~"
+DCB :rsp_var
+sp_base_1:
+DCB :constant_scode
+DCB :DSTACK
+
+rsp_base:
+DCB $04
+DCB "RSPB~"
+DCB :sp_base
+rsp_base_1:
+DCB :constant_scode
+DCB :RSTACK
+
+dp_var:
+DCB $02
+DCB "DP~~~"
+DCB :rsp_base
+dp_var_1:
+DCB :constant_scode
+DCB DP,$00
+
+spat:
+DCB $3
+DCB "SP@~~"
+DCB :dp_var
+spat_1:
+DCB :colon
+DCB :sp_base_1
+DCB :plus_1
+DCB :at_1
+DCB :semi
+
+spbang:
+DCB $3
+DCB "SP!~~"
+DCB :spat
+spbang_1:
+DCB :colon
+DCB :sp_base_1
+DCB :plus_1
+DCB :bang_1
+DCB :semi
+
+decimal:
+DCB $07
+DCB "DECIM"
+DCB :spbang
+decimal_1:
+DCB :decimal_1+$2
+LDA #$0a
+STA BASE
+JMP next
+
+hex:
+DCB $03
+DCB "HEX~~"
+DCB :decimal
+hex_1:
+DCB :hex_1+$2
+LDA #$10
+STA BASE
+JMP next
+
+question:
+DCB $08
+DCB "QUEST"
+DCB :hex
+question_1:
+DCB :question_1+$2
+LDX #0
+LDA (DP,X)
+BEQ question_ok
+TAY
+INY
+LDA #$20
+STA (DP),Y
+INY
+LDA #$3f
+STA (DP),Y
+TYA
+STA (DP,X)
+LDX #DP
+JSR pushDS
+JMP _patch+$2
+question_ok:
+LDA #<okmsg
+STA $00
+LDA #>okmsg
+STA $01
+LDX #0
+JSR pushDS
+JMP next
+
+qstack:
+DCB $06
+DCB "?STAC"
+DCB :question
+qstack_1:
+DCB :colon
+DCB :_clitnum,MODE
+DCB :cat_1
+DCB :_clitnum,$02
+DCB :and_1
+DCB :_if,$07
+DCB :_litnum,:stackmsg
+DCB :_patch
+DCB :semi
+
+qnumber:
+DCB $07
+DCB "?NUMB"
+DCB :qstack
+qnumber_1:
+DCB :colon
+DCB :number_1
+DCB :not_1
+DCB :semi
+
+number:
+DCB $06
+DCB "NUMBE"
+DCB :qnumber
+number_1:
+DCB :number_1+$2
+LDY #0
+STY $00
+STY $01
+LDA (DP),Y
+BEQ number_fail
+STA $05
+INY
+LDA (DP),Y
+CMP #$2d
+BNE number_fetch_1
+LDA $05
+CMP #$2
+BMI number_fail
+number_fetch_loop:
+INY
+LDA (DP),Y
+number_fetch_1:
+SEC
+SBC #$30
+BMI number_fail
+CMP #$a
+BMI number_skip_ascii
+SBC #$07
+CMP #$0a
+BMI number_fail
+CMP #$24
+BPL number_fail
+number_skip_ascii:
+CMP BASE
+BPL number_fail
+ADC $00
+STA $00
+TYA
+CMP $05
+BEQ number_end
+LDA BASE
+STA $04
+JSR multiply
+JMP number_fetch_loop
+number_fail:
+LDX #0
+STX $00
+STX $01
+JSR pushDS
+JMP next
+number_end:
+LDX #0
+LDY #1
+LDA (DP),Y
+CMP #$2d
+BNE number_end_2
+JSR _two_comp
+number_end_2:
+JSR pushDS
+INX
+STX $00
+DEX
+STX $01
+JSR pushDS
+JMP next
+
+break:
+DCB $03
+DCB "BRK~~"
+DCB :number
+break_1:
+DCB :break_1+$2
+BRK
+JMP next
+
+dots:
+DCB $02
+DCB ".S~~~"
+DCB :break
+dots_1:
+DCB :colon
+DCB :sp_var_1
+DCB :cat_1
+DCB :_clitnum, $2, :plus_1
+DCB :dup_1, :_clitnum, $ff, :lt_1
+DCB :_if,$a
+DCB :dup_1, :spat_1, :dot_1
+DCB :_while,$17
+DCB :_clitnum, $2e "."
+DCB :echo_1
+DCB :drop_1
+DCB :semi
+
+ddot:
+DCB $02
+DCB "D.~~~"
+DCB :dots
+ddot_1:
+DCB :colon
+DCB :dup_1
+DCB :dot_1
+DCB :semi
+
+dot:
+DCB $01
+DCB ".~~~~"
+DCB :ddot
+dot_1:
+DCB :colon
+DCB :dup_1,:zero_lt_1
+DCB :r_left_1
+DCB :abs_1
+DCB :_clitnum,$0
+DCB :aspace_1
+DCB :lrot_1
+DCB :digascii_1
+DCB :dup_1
+DCB :_if,$04
+DCB :_while,$09
+DCB :drop_1
+DCB :r_right_1
+DCB :_if,$4
+DCB :_clitnum, $2d
+DCB :display_1
+DCB :semi
+
+display:
+DCB $07
+DCB "DISPL"
+DCB :dot
+display_1:
+DCB :colon
+DCB :dup_1
+DCB :_if,$06
+DCB :echo_1
+DCB :_while,$09
+DCB :drop_1
+DCB :semi
+
+digascii:
+DCB $08
+DCB "DIGAS"
+DCB :display
+digascii_1:
+DCB :colon
+DCB :_clitnum,BASE
+DCB :cat_1
+DCB :modslash_1
+DCB :ascii_1
+DCB :swap_1
+DCB :semi
+
+ascii:
+DCB $05
+DCB "ASCII"
+DCB :digascii
+ascii_1:
+DCB :ascii_1+$2
+LDX #0
+JSR popDS
+LDA $00
+CLC
+ADC #$37
+CMP #$41
+BPL ascii_end
+SBC #$6
+ascii_end:
+STA $00
+JSR pushDS
+JMP next
+
+echo:
+DCB $04
+DCB "ECHO~"
+DCB :ascii
+echo_1:
+DCB :echo_1+$2
+LDX #0
+JSR popDS
+LDA $00
+JSR draw_char
+JSR cursor_fwd
+JMP next
+
+clear:
+DCB $5
+DCB "CLEAR"
+DCB :echo
+clear_1:
+DCB :clear_1+$2
+JSR clear_screen
+JSR reset_cursor
+JMP next
+
+search:
+DCB $06
+DCB "SEARC"
+DCB :clear
+search_1:
+DCB :search_1+$2
+LDX #CONTEXT
+JSR pushDS
+LDX #0
+JSR popDS
+LDY #0
+LDA (DP),Y
+CMP #$5
+BMI search_2
+LDA #$5
+search_2:
+STA $02
+JMP search_comp
+search_walk_list:
+LDY #$6
+LDA ($00),Y
+PHA
+INY
+LDA ($00),Y
+STA $01
+PLA
+STA $00
+search_comp:
+LDA $01
+BEQ search_term
+LDY $02
+search_comp_loop:
+LDA (DP),Y
+CMP ($00),Y
+BNE search_walk_list
+DEY
+BPL search_comp_loop
+LDA $00
+CLC
+ADC #$08
+BCC search_skip_carry
+INC $01
+search_skip_carry:
+STA $00
+LDX #0
+JSR pushDS
+LDX #0
+STX $00
+STX $01
+JSR pushDS
+JMP next
+search_term:
+LDX #1
+STX $00
+DEX
+JSR pushDS
+JMP next
+
+aspace:
+DCB $06
+DCB "ASPAC"
+DCB :search
+aspace_1:
+DCB :aspace_1+$2
+LDX #0
+STX $01
+LDA #$20
+STA $00
+JSR pushDS
+JMP next
+
+token:
+DCB $05
+DCB "TOKEN"
+DCB :aspace
+token_1:
+DCB :token_1+$2
+LDX #0
+JSR popDS
+LDA $00
+CMP #$20
+BNE token_space_skip
+LDX buff_pos
+DEX
+token_space_loop:
+INX
+LDA buff,X
+CMP #$20
+BEQ token_space_loop
+STX buff_pos
+token_space_skip:
+LDX buff_pos
+LDY #0
+token_real_loop:
+INY
+LDA buff,X
+BEQ token_end
+INX
+JSR make_uppercase
+STA (DP),Y
+CMP $00
+BEQ token_end_2
+BNE token_real_loop
+token_end:
+INX
+token_end_2:
+STX buff_pos
+DEY
+TYA
+LDX #0
+STA (DP,X)
+JMP next
+
+inline:
+DCB $06
+DCB "INLIN"
+DCB :token
+inline_1:
+DCB :inline_1+$2
+JSR freshline
+LDA #39
+STA buff_size
+LDA #$3e
+JSR type_char
+JSR get_line
+LDA #0
+STA buff_pos
+JSR freshline
+JMP next
+
+type:
+DCB $04
+DCB "TYPE~"
+DCB :inline
+type_1:
+DCB :type_1+$2
+LDX #P0L
+JSR popDS
+LDX #0
+LDA (P0L,X)
+INC P0L
+BCC type_2
+INC P0H
+type_2:
+JSR draw_string
+JMP next
+
+start:
+DCB $05
+DCB "START"
+DCB :type
+DCB $ff
+start_1:
+DCB :start_1+$2
+forth_start:
+LDA MODE
+AND #1
+BNE forth_restart
+JSR clear_screen
+JSR reset_cursor
+LDA #<startmsg
+STA WA
+LDA #>startmsg
+STA WAH
+LDA #<dict_start
+STA DP
+LDA #>dict_start
+STA DPH
+LDA #<last_dict
+STA CONTEXT
+LDA #>last_dict
+STA CONTEXTH
+forth_restart:
+LDA #1
+STA MODE
+LDA #$0A
+STA BASE
+LDA #0
+STA SP
+STA RSP
+STA buff_pos
+LDA #<outer_interp
+STA IR
+LDA #>outer_interp
+STA IRH
+LDX #WA
+JSR pushDS
+JMP next
+
+
+last_dict:
+DCB $ff
+DCB "NULL~"
+DCB :start
+DCB $ff,$ff
+
+
+*=$d800
+dict_start:
+
+
+*=$de00
+DSTACK:
+*=$de01
+DSTACKH:
+*=$df00
+RSTACK:
+*=$df01
+RSTACKH:
+
+
+*=$fd00
+keytable1:
+DCB $00,$00,$00,$00,$00
+DCB $00,$00,$fa,$00,$00
+DCB $a0,$c0,$00,$a0,$c0
+DCB $28,$7c,$28,$7c,$28
+DCB $20,$54,$fe,$54,$08
+DCB $48,$b0,$54,$1a,$24
+DCB $2c,$5a,$4a,$44,$0a
+DCB $00,$00,$a0,$c0,$00
+DCB $00,$38,$44,$82,$00
+DCB $00,$82,$44,$38,$00
+DCB $00,$50,$e0,$50,$00
+DCB $10,$10,$7c,$10,$10
+DCB $00,$00,$07,$06,$00
+DCB $10,$10,$10,$10,$10
+DCB $00,$00,$06,$06,$00
+DCB $06,$08,$10,$20,$c0
+DCB $7c,$8a,$92,$a2,$7c
+DCB $22,$42,$fe,$02,$02
+DCB $42,$86,$8a,$92,$62
+DCB $44,$92,$92,$92,$6c
+DCB $18,$28,$48,$fe,$08
+DCB $f2,$a2,$a2,$a2,$9c
+DCB $3c,$52,$92,$92,$8c
+DCB $86,$88,$90,$a0,$c0
+DCB $6c,$92,$92,$92,$6c
+DCB $64,$92,$92,$92,$7c
+DCB $00,$00,$66,$66,$00
+DCB $00,$00,$67,$66,$00
+DCB $10,$28,$28,$44,$44
+DCB $28,$28,$28,$28,$28
+DCB $44,$44,$28,$28,$10
+DCB $40,$80,$8a,$90,$60
+DCB $7c,$82,$9a,$aa,$78
+DCB $0e,$30,$d0,$30,$0e
+DCB $fe,$92,$92,$72,$0c
+DCB $38,$44,$82,$82,$44
+DCB $fe,$82,$82,$44,$38
+DCB $fe,$92,$92,$82,$82
+DCB $fe,$90,$90,$80,$80
+DCB $7c,$82,$82,$8a,$4e
+DCB $fe,$10,$10,$10,$fe
+DCB $82,$82,$fe,$82,$82
+DCB $82,$82,$fc,$80,$80
+DCB $fe,$10,$30,$48,$86
+DCB $fe,$02,$02,$02,$02
+DCB $fe,$30,$08,$30,$fe
+DCB $fe,$20,$10,$08,$fe
+DCB $7c,$82,$82,$82,$7c
+DCB $fe,$90,$90,$90,$60
+DCB $7c,$82,$8a,$84,$7a
+*=$fe00
+keytable2:
+DCB $fe,$90,$98,$94,$62
+DCB $62,$92,$92,$92,$8c
+DCB $80,$80,$fe,$80,$80
+DCB $fc,$02,$02,$02,$fc
+DCB $e0,$18,$06,$18,$e0
+DCB $f0,$0e,$30,$0e,$f0
+DCB $c6,$28,$10,$28,$c6
+DCB $c0,$20,$1e,$20,$c0
+DCB $86,$8a,$92,$a2,$c2
+DCB $00,$fe,$82,$82,$00
+DCB $c0,$20,$10,$08,$06
+DCB $00,$82,$82,$fe,$00
+DCB $20,$40,$80,$40,$20
+DCB $02,$02,$02,$02,$02
+DCB $00,$00,$80,$40,$00
+DCB $04,$2a,$2a,$1c,$02
+DCB $fe,$24,$22,$22,$1c
+DCB $1c,$22,$22,$22,$14
+DCB $1c,$22,$22,$24,$fe
+DCB $1c,$2a,$2a,$2a,$1a
+DCB $20,$20,$7e,$a0,$a0
+DCB $19,$25,$25,$15,$3e
+DCB $fe,$10,$20,$20,$1e
+DCB $02,$22,$be,$02,$02
+DCB $00,$22,$22,$22,$bc
+DCB $fe,$04,$08,$14,$22
+DCB $02,$82,$fe,$02,$02
+DCB $3e,$20,$1e,$20,$1e
+DCB $3e,$10,$20,$20,$1e
+DCB $1c,$22,$22,$22,$1c
+DCB $3f,$14,$22,$22,$1c
+DCB $1c,$22,$22,$14,$3f
+DCB $3e,$10,$20,$20,$10
+DCB $12,$2a,$2a,$2a,$24
+DCB $20,$20,$7c,$22,$22
+DCB $3c,$02,$02,$04,$3e
+DCB $38,$04,$02,$04,$38
+DCB $3c,$02,$3c,$02,$3c
+DCB $22,$14,$08,$14,$22
+DCB $32,$0a,$04,$08,$30
+DCB $22,$26,$2a,$32,$22
+DCB $10,$10,$6c,$82,$83
+DCB $00,$00,$fe,$00,$00
+DCB $82,$82,$6c,$10,$10
+DCB $10,$20,$10,$08,$10
+DCB $ff,$ff,$ff,$ff,$ff
