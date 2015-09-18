@@ -53,6 +53,7 @@ function SimulatorWidget(node) {
       ui.toggleMonitor();
       simulator.toggleMonitor();
     });
+    $node.find('.updateButton').click(simulator.updateDebugInfo);
     $node.find('.stepButton').click(simulator.debugExec);
     $node.find('.gotoButton').click(simulator.gotoAddr);
     $node.find('.notesButton').click(ui.showNotes);
@@ -71,7 +72,7 @@ function SimulatorWidget(node) {
   function UI() {
     var currentState;
 
-	//States
+    //States
     var start = {
       assemble: true,
       run: [false, 'Run'],
@@ -112,7 +113,7 @@ function SimulatorWidget(node) {
     };
 
 
-	//More states/UI stuff
+    //More states/UI stuff
     function setState(state) {
       $node.find('.assembleButton').attr('disabled', !state.assemble);
       if (state.run) {
@@ -291,7 +292,7 @@ function SimulatorWidget(node) {
     var monitoring = false;
     var executeId;
 
-	//Assorted instructions
+    //Assorted instructions
     //set zero and negative processor flags based on result
     function setNVflags(value) {
       if (value) {
@@ -1656,6 +1657,7 @@ function SimulatorWidget(node) {
       enableDebugger: enableDebugger,
       stopDebugger: stopDebugger,
       debugExec: debugExec,
+      updateDebugInfo: updateDebugInfo,
       gotoAddr: gotoAddr,
       reset: reset,
       stop: stop,
@@ -1683,10 +1685,10 @@ function SimulatorWidget(node) {
       var nameAndVal;
       for (var i = 0; i < defineIndex.length; i++) {
         nameAndVal = defineIndex[i].split("|");
-		if (name == nameAndVal[0]) { 
+        if (name == nameAndVal[0]) { 
         
         return nameAndVal[1]; }
-	  }
+      }
       return null;
     }
 
@@ -1747,7 +1749,6 @@ function SimulatorWidget(node) {
             return null;
           }
         } else {
-          console.log(param);
           if(assembler.isFirstPass()) { return 0x80; }
           else { return null; }
         }
