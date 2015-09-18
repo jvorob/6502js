@@ -1,3 +1,13 @@
+;VERSION HISTORY
+;
+; 0.1: 
+;      Basic syntax working, some operations, numbers, .
+;      The Great Escape
+;
+; 0.2:
+;      Cleaned up post-escape
+
+
 define buff $10
 define max_buff_size $50
 define buff_size $61
@@ -1037,7 +1047,7 @@ _patch:
 *=$d000
 startmsg:
   DCB $0a
-  DCB "FORSH 0.1:"
+  DCB "FORSH 0.2:"
 
 restartmsg:
   DCB $08
