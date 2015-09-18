@@ -1129,10 +1129,10 @@ DCB "EXECU"
 DCB $00,$00
 execute_1:
 DCB :execute_1+$2
-LDX #WA
-JSR popDS
-CLC
-JMP run
+	LDX #WA
+	JSR popDS
+	CLC
+	JMP run
 
 
 r_left:
@@ -1141,10 +1141,10 @@ DCB "<R~~~"
 DCB :execute
 r_left_1:
 DCB :r_left_1+$2
-LDX #0
-JSR popDS
-JSR pushRS
-JMP next
+	LDX #0
+	JSR popDS
+	JSR pushRS
+	JMP next
 
 
 r_right:
@@ -1153,18 +1153,18 @@ DCB "R>~~~"
 DCB :r_left
 r_right_1:
 DCB :r_right_1+$2
-LDX #0
-JSR popRS
-JSR pushDS
-JMP next
+	LDX #0
+	JSR popRS
+	JSR pushDS
+	JMP next
 
 
 over:
-  DCB $04
-  DCB "OVER~"
-  DCB :r_right
-  over_1:
-  DCB :over_1+$2
+DCB $04
+DCB "OVER~"
+DCB :r_right
+over_1:
+DCB :over_1+$2
   LDY SP
   INY
   INY
@@ -1178,88 +1178,90 @@ over:
 
 
 drop:
-  DCB $04
-  DCB "DROP~"
-  DCB :over
-  drop_1:
-  DCB :drop_1+$2
+DCB $04
+DCB "DROP~"
+DCB :over
+drop_1:
+DCB :drop_1+$2
   LDX #0
   JSR popDS
   JMP next
 
 dup:
-  DCB $03
-  DCB "DUP~~"
-  DCB :drop
-  dup_1:
-  DCB :dup_1+$2
+DCB $03
+DCB "DUP~~"
+DCB :drop
+dup_1:
+DCB :dup_1+$2
   LDX #0
   JSR popDS
   JSR pushDS
   JSR pushDS
   JMP next
 
+;rrot if top of stack on right
 rrot:
 DCB $04
 DCB "RROT~"
 DCB :dup
 rrot_1:
 DCB :rrot_1+$2
-LDY SP
-TYA
-CLC
-ADC #$04
-TAX
-LDA DSTACK,X
-STA $00
-LDA DSTACKH,X
-STA $01
-LDA DSTACK,Y
-STA DSTACK,X
-LDA DSTACKH,Y
-STA DSTACKH,X
-DEX
-DEX
-LDA DSTACK,X
-STA DSTACK,Y
-LDA DSTACKH,X
-STA DSTACKH,Y
-LDA $00
-STA DSTACK,X
-LDA $01
-STA DSTACKH,X
-JMP next
+	LDY SP
+	TYA
+	CLC
+	ADC #$04
+	TAX
+	LDA DSTACK,X   ;bottom
+	STA $00        ;->temp
+	LDA DSTACKH,X
+	STA $01
+	LDA DSTACK,Y   ;top
+	STA DSTACK,X   ;->bottom
+	LDA DSTACKH,Y
+	STA DSTACKH,X
+	DEX
+	DEX
+	LDA DSTACK,X  ;mid
+	STA DSTACK,Y  ;->top
+	LDA DSTACKH,X
+	STA DSTACKH,Y
+	LDA $00       ;temp
+	STA DSTACK,X  ;->mid
+	LDA $01
+	STA DSTACKH,X
+	JMP next
 
+;lrot if top of stack on right
 lrot:
 DCB $04
 DCB "LROT~"
 DCB :rrot
 lrot_1:
 DCB :lrot_1+$2
-LDX SP
-LDA DSTACK,X
-STA $00
-LDA DSTACKH,X
-STA $01
-TXA
-CLC
-ADC #$04
-TAY
-LDA DSTACK,Y
-STA DSTACK,X
-LDA DSTACKH,Y
-STA DSTACKH,X
-INX
-INX
-LDA DSTACK,X
-STA DSTACK,Y
-LDA DSTACKH,X
-STA DSTACKH,Y
-LDA $00
-STA DSTACK,X
-LDA $01
-STA DSTACKH,X
-JMP next
+	LDX SP
+	LDA DSTACK,X
+	STA $00
+	LDA DSTACKH,X
+	STA $01
+	TXA
+	CLC
+	ADC #$04
+	TAY
+	LDA DSTACK,Y
+	STA DSTACK,X
+	LDA DSTACKH,Y
+	STA DSTACKH,X
+	INX
+	INX
+	LDA DSTACK,X
+	STA DSTACK,Y
+	LDA DSTACKH,X
+	STA DSTACKH,Y
+	LDA $00
+	STA DSTACK,X
+	LDA $01
+	STA DSTACKH,X
+	JMP next
 
 swap:
 DCB $04
@@ -1267,15 +1269,15 @@ DCB "SWAP~"
 DCB :lrot
 swap_1:
 DCB :swap_1+$2
-LDX #0
-JSR popDS
-LDX #2
-JSR popDS
-LDX #0
-JSR pushDS
-LDX #2
-JSR pushDS
-JMP next
+	LDX #0
+	JSR popDS
+	LDX #2
+	JSR popDS
+	LDX #0
+	JSR pushDS
+	LDX #2
+	JSR pushDS
+	JMP next
 
 and:
 DCB $03
@@ -1283,16 +1285,16 @@ DCB "AND~~"
 DCB :swap
 and_1:
 DCB :and_1+$2
-LDX #0
-JSR popDS
-LDY SP
-LDA $00
-AND DSTACK,Y
-STA DSTACK,Y
-LDA $01
-AND DSTACKH,Y
-STA DSTACKH,Y
-JMP next
+	LDX #0
+	JSR popDS
+	LDY SP
+	LDA $00
+	AND DSTACK,Y
+	STA DSTACK,Y
+	LDA $01
+	AND DSTACKH,Y
+	STA DSTACKH,Y
+	JMP next
 
 not:
 DCB $03
@@ -1300,20 +1302,20 @@ DCB "NOT~~"
 DCB :and
 not_1:
 DCB :not_1+$2
-LDX #0
-JSR popDS
-LDA $00
-ORA $01
-BEQ not_f
-LDA #0
-BEQ not_end
+	LDX #0
+	JSR popDS
+	LDA $00
+	ORA $01
+	BEQ not_f
+	LDA #0
+	BEQ not_end
 not_f:
-LDA #1
+	LDA #1
 not_end:
-STA $00
-STX $01
-JSR pushDS
-JMP next
+	STA $00
+	STX $01
+	JSR pushDS
+	JMP next
 
 modslash:
 DCB $04
@@ -1321,16 +1323,16 @@ DCB "MOD/~"
 DCB :not
 modslash_1:
 DCB :modslash_1+$2
-LDX #2
-JSR popDS
-LDX #0
-JSR popDS
-JSR divide
-LDX #$03
-JSR pushDS
-LDX #$05
-JSR pushDS
-JMP next
+	LDX #2
+	JSR popDS
+	LDX #0
+	JSR popDS
+	JSR divide
+	LDX #$03
+	JSR pushDS
+	LDX #$05
+	JSR pushDS
+	JMP next
 
 slash:
 DCB $01
@@ -1338,14 +1340,14 @@ DCB "/~~~~"
 DCB :modslash
 slash_1:
 DCB :slash_1+$2
-LDX #2
-JSR popDS
-LDX #0
-JSR popDS
-JSR divide
-LDX #$03
-JSR pushDS
-JMP next
+	LDX #2
+	JSR popDS
+	LDX #0
+	JSR popDS
+	JSR divide
+	LDX #$03
+	JSR pushDS
+	JMP next
 
 star:
 DCB $01
@@ -1353,14 +1355,14 @@ DCB "*~~~~"
 DCB :slash
 star_1:
 DCB :star_1+$2
-LDX #4
-JSR popDS
-LDX #0
-JSR popDS
-JSR multiply
-LDX #0
-JSR pushDS
-JMP next
+	LDX #4
+	JSR popDS
+	LDX #0
+	JSR popDS
+	JSR multiply
+	LDX #0
+	JSR pushDS
+	JMP next
 
 bang:
 DCB $01
@@ -1368,16 +1370,16 @@ DCB "!~~~~"
 DCB :star
 bang_1:
 DCB :bang_1+$2
-LDX #2
-JSR popDS
-LDX #0
-JSR popDS
-LDA $00
-STA ($02,X)
-INY
-LDA $01
-STA ($02,X)
-JMP next
+	LDX #2
+	JSR popDS
+	LDX #0
+	JSR popDS
+	LDA $00
+	STA ($02,X)
+	INY
+	LDA $01
+	STA ($02,X)
+	JMP next
 
 cbang:
 DCB $02
@@ -1385,13 +1387,13 @@ DCB "C!~~~"
 DCB :bang
 cbang_1:
 DCB :cbang_1+$2
-LDX #2
-JSR popDS
-LDX #0
-JSR popDS
-LDA $00
-STA ($02,X)
-JMP next
+	LDX #2
+	JSR popDS
+	LDX #0
+	JSR popDS
+	LDA $00
+	STA ($02,X)
+	JMP next
 
 at:
 DCB $01
@@ -1399,18 +1401,18 @@ DCB "@~~~~"
 DCB :cbang
 at_1:
 DCB :at_1+$2
-LDX SP
-LDA DSTACK,X
-STA $00
-LDA DSTACKH,X
-STA $01
-LDY #0
-LDA ($00),Y
-STA DSTACK,X
-INY
-LDA ($00),Y
-STA DSTACKH,X
-JMP next
+	LDX SP
+	LDA DSTACK,X
+	STA $00
+	LDA DSTACKH,X
+	STA $01
+	LDY #0
+	LDA ($00),Y
+	STA DSTACK,X
+	INY
+	LDA ($00),Y
+	STA DSTACKH,X
+	JMP next
 
 cat:
 DCB $02
@@ -1418,17 +1420,17 @@ DCB "C@~~~"
 DCB :at
 cat_1:
 DCB :cat_1+$2
-LDX SP
-LDA DSTACK,X
-STA $00
-LDA DSTACKH,X
-STA $01
-LDA #0
-STA DSTACKH,X
-TAY
-LDA ($00),Y
-STA DSTACK,X
-JMP next
+	LDX SP
+	LDA DSTACK,X
+	STA $00
+	LDA DSTACKH,X
+	STA $01
+	LDA #0
+	STA DSTACKH,X
+	TAY
+	LDA ($00),Y
+	STA DSTACK,X
+	JMP next
 
 plus:
 DCB $01
@@ -1436,19 +1438,19 @@ DCB "+~~~~"
 DCB :cat
 plus_1:
 DCB :plus_1+$2
-LDX #2
-JSR popDS
-LDX #0
-JSR popDS
-CLC
-LDA $02
-ADC $00
-STA $00
-LDA $03
-ADC $01
-STA $01
-JSR pushDS
-JMP next
+	LDX #2
+	JSR popDS
+	LDX #0
+	JSR popDS
+	CLC
+	LDA $02
+	ADC $00
+	STA $00
+	LDA $03
+	ADC $01
+	STA $01
+	JSR pushDS
+	JMP next
 
 minus:
 DCB $01
@@ -1456,19 +1458,19 @@ DCB "-~~~~"
 DCB :plus
 minus_1:
 DCB :minus_1+$2
-LDX #2
-JSR popDS
-LDX #0
-JSR popDS
-SEC
-LDA $00
-SBC $02
-STA $00
-LDA $01
-SBC $03
-STA $01
-JSR pushDS
-JMP next
+	LDX #2
+	JSR popDS
+	LDX #0
+	JSR popDS
+	SEC
+	LDA $00
+	SBC $02
+	STA $00
+	LDA $01
+	SBC $03
+	STA $01
+	JSR pushDS
+	JMP next
 
 twocomp:
 DCB $5
@@ -1476,11 +1478,11 @@ DCB "2COMP"
 DCB :minus
 twocomp_1:
 DCB :twocomp_1+$2
-LDX #0
-JSR popDS
-JSR _two_comp
-JSR pushDS
-JMP next
+	LDX #0
+	JSR popDS
+	JSR _two_comp
+	JSR pushDS
+	JMP next
 
 abs:
 DCB $3
@@ -1488,15 +1490,15 @@ DCB "ABS~~"
 DCB :twocomp
 abs_1:
 DCB :abs_1+$2
-LDY SP
-LDA DSTACKH,Y
-BPL abs_end
-LDX #0
-JSR popDS
-JSR _two_comp
-JSR pushDS
+	LDY SP
+	LDA DSTACKH,Y
+	BPL abs_end
+	LDX #0
+	JSR popDS
+	JSR _two_comp
+	JSR pushDS
 abs_end:
-JMP next
+	JMP next
 
 eq:
 DCB $1
@@ -1504,9 +1506,9 @@ DCB "=~~~~"
 DCB :abs
 eq_1:
 DCB :eq_1+$2
-JSR stack_cmp
-BNE cmp_f
-BEQ cmp_t
+	JSR stack_cmp
+	BNE cmp_f
+	BEQ cmp_t
 
 lt:
 DCB $1
@@ -1514,9 +1516,9 @@ DCB "<~~~~"
 DCB :eq
 lt_1:
 DCB :lt_1+$2
-JSR stack_cmp
-BCS cmp_f
-BCC cmp_t
+	JSR stack_cmp
+	BCS cmp_f
+	BCC cmp_t
 
 gt:
 DCB $1
@@ -1524,10 +1526,10 @@ DCB ">~~~~"
 DCB :lt
 gt_1:
 DCB :gt_1+$2
-JSR stack_cmp
-BCC cmp_f
-BEQ cmp_f
-BCS cmp_t
+	JSR stack_cmp
+	BCC cmp_f
+	BEQ cmp_f
+	BCS cmp_t
 
 lte:
 DCB $2
@@ -1535,21 +1537,21 @@ DCB "<=~~~"
 DCB :gt
 lte_1:
 DCB :lte_1+$2
-JSR stack_cmp
-BCC cmp_t
-BEQ cmp_t
-BCS cmp_f
+	JSR stack_cmp
+	BCC cmp_t
+	BEQ cmp_t
+	BCS cmp_f
 
 
+;Used by all comparisons
 cmp_f:
-LDA #0
-JSR pushByte
-JMP next
-
+	LDA #0
+	JSR pushByte
+	JMP next
 cmp_t:
-LDA #1
-JSR pushByte
-JMP next
+	LDA #1
+	JSR pushByte
+	JMP next
 
 
 gte:
@@ -1558,9 +1560,9 @@ DCB ">=~~~"
 DCB :lte
 gte_1:
 DCB :gte_1+$2
-JSR stack_cmp
-BCC cmp_f
-BCS cmp_t
+	JSR stack_cmp
+	BCC cmp_f
+	BCS cmp_t
 
 zero_eq:
 DCB $2
@@ -1568,9 +1570,9 @@ DCB "0=~~~"
 DCB :gte
 zero_eq_1:
 DCB :zero_eq_1+$2
-JSR zero_cmp
-BEQ cmp_t
-BNE cmp_f
+	JSR zero_cmp
+	BEQ cmp_t
+	BNE cmp_f
 
 zero_lt:
 DCB $2
@@ -1578,9 +1580,9 @@ DCB "0<~~~"
 DCB :zero_eq
 zero_lt_1:
 DCB :zero_lt_1+$2
-JSR zero_cmp
-BCC cmp_t
-BCS cmp_f
+	JSR zero_cmp
+	BCC cmp_t
+	BCS cmp_f
 
 constant:
 DCB $08
@@ -1588,17 +1590,18 @@ DCB "CONST"
 DCB :zero_lt
 constant_1:
 DCB :colon
+;todo
 DCB :semi
 constant_scode:
-LDY #1
-LDA (WA),Y
-STA $01
-DEY
-LDA (WA),Y
-STA $00
-LDX #0
-JSR pushDS
-JMP next
+	LDY #1
+	LDA (WA),Y
+	STA $01
+	DEY
+	LDA (WA),Y
+	STA $00
+	LDX #0
+	JSR pushDS
+	JMP next
 
 variable:
 DCB $08
@@ -1606,11 +1609,12 @@ DCB "VARIA"
 DCB :constant
 variable_1:
 DCB :colon
+;todo
 DCB :semi
 variable_scode:
-LDX #WA
-JSR pushDS
-JMP next
+	LDX #WA
+	JSR pushDS
+	JMP next
 
 base_var:
 DCB $04
@@ -1618,7 +1622,7 @@ DCB "BASE~"
 DCB :variable
 base_var_1:
 DCB :constant_scode
-DCB BASE,$00
+	DCB BASE,$00
 
 sp_var:
 DCB $02
@@ -1626,7 +1630,7 @@ DCB "SP~~~"
 DCB :base_var
 sp_var_1:
 DCB :constant_scode
-DCB SP,$00
+	DCB SP,$00
 
 rsp_var:
 DCB $03
@@ -1634,7 +1638,7 @@ DCB "RSP~~"
 DCB :sp_var
 rsp_var_1:
 DCB :constant_scode
-DCB RSP,$00
+	DCB RSP,$00
 
 sp_base:
 DCB $03
@@ -1642,7 +1646,7 @@ DCB "SPB~~"
 DCB :rsp_var
 sp_base_1:
 DCB :constant_scode
-DCB :DSTACK
+	DCB :DSTACK
 
 rsp_base:
 DCB $04
@@ -1650,7 +1654,7 @@ DCB "RSPB~"
 DCB :sp_base
 rsp_base_1:
 DCB :constant_scode
-DCB :RSTACK
+	DCB :RSTACK
 
 dp_var:
 DCB $02
@@ -1658,7 +1662,7 @@ DCB "DP~~~"
 DCB :rsp_base
 dp_var_1:
 DCB :constant_scode
-DCB DP,$00
+	DCB DP,$00
 
 spat:
 DCB $3
@@ -1666,10 +1670,10 @@ DCB "SP@~~"
 DCB :dp_var
 spat_1:
 DCB :colon
-DCB :sp_base_1
-DCB :plus_1
-DCB :at_1
-DCB :semi
+	DCB :sp_base_1
+	DCB :plus_1
+	DCB :at_1
+	DCB :semi
 
 spbang:
 DCB $3
@@ -1677,10 +1681,10 @@ DCB "SP!~~"
 DCB :spat
 spbang_1:
 DCB :colon
-DCB :sp_base_1
-DCB :plus_1
-DCB :bang_1
-DCB :semi
+	DCB :sp_base_1
+	DCB :plus_1
+	DCB :bang_1
+	DCB :semi
 
 decimal:
 DCB $07
@@ -1688,9 +1692,9 @@ DCB "DECIM"
 DCB :spbang
 decimal_1:
 DCB :decimal_1+$2
-LDA #$0a
-STA BASE
-JMP next
+	LDA #$0a
+	STA BASE
+	JMP next
 
 hex:
 DCB $03
@@ -1698,39 +1702,42 @@ DCB "HEX~~"
 DCB :decimal
 hex_1:
 DCB :hex_1+$2
-LDA #$10
-STA BASE
-JMP next
+	LDA #$10
+	STA BASE
+	JMP next
 
+;When input fails to parse, 
+;test if empty string or complain ('?')
+;if failed jump to _patch
 question:
 DCB $08
 DCB "QUEST"
 DCB :hex
 question_1:
 DCB :question_1+$2
-LDX #0
-LDA (DP,X)
-BEQ question_ok
-TAY
-INY
-LDA #$20
-STA (DP),Y
-INY
-LDA #$3f
-STA (DP),Y
-TYA
-STA (DP,X)
-LDX #DP
-JSR pushDS
-JMP _patch+$2
-question_ok:
-LDA #<okmsg
-STA $00
-LDA #>okmsg
-STA $01
-LDX #0
-JSR pushDS
-JMP next
+	LDX #0
+	LDA (DP,X)
+	BEQ question_ok
+	TAY
+	INY
+	LDA #$20
+	STA (DP),Y
+	INY
+	LDA #$3f
+	STA (DP),Y
+	TYA
+	STA (DP,X)
+	LDX #DP
+	JSR pushDS
+	JMP _patch+$2
+	question_ok:
+	LDA #<okmsg
+	STA $00
+	LDA #>okmsg
+	STA $01
+	LDX #0
+	JSR pushDS
+	JMP next
 
 qstack:
 DCB $06
@@ -1738,14 +1745,14 @@ DCB "?STAC"
 DCB :question
 qstack_1:
 DCB :colon
-DCB :_clitnum,MODE
-DCB :cat_1
-DCB :_clitnum,$02
-DCB :and_1
-DCB :_if,$07
-DCB :_litnum,:stackmsg
-DCB :_patch
-DCB :semi
+	DCB :_clitnum,MODE
+	DCB :cat_1
+	DCB :_clitnum,$02
+	DCB :and_1
+	DCB :_if,$07
+	DCB :_litnum,:stackmsg
+	DCB :_patch
+	DCB :semi
 
 qnumber:
 DCB $07
@@ -1753,76 +1760,81 @@ DCB "?NUMB"
 DCB :qstack
 qnumber_1:
 DCB :colon
-DCB :number_1
-DCB :not_1
-DCB :semi
+	DCB :number_1
+	DCB :not_1
+	DCB :semi
 
+;parses a text number into a stack number
+;$00,$01 is result
+;$02,$03 is used by multiply
+;$4 is multiplier
+;$05 is numdigits
 number:
 DCB $06
 DCB "NUMBE"
 DCB :qnumber
 number_1:
 DCB :number_1+$2
-LDY #0
-STY $00
-STY $01
-LDA (DP),Y
-BEQ number_fail
-STA $05
-INY
-LDA (DP),Y
-CMP #$2d
-BNE number_fetch_1
-LDA $05
-CMP #$2
-BMI number_fail
+	LDY #0
+	STY $00
+	STY $01
+	LDA (DP),Y
+	BEQ number_fail
+	STA $05
+	INY
+	LDA (DP),Y
+	CMP #$2d           ;if starts with "-", skip it
+	BNE number_fetch_1
+	LDA $05
+	CMP #$2
+	BMI number_fail
 number_fetch_loop:
-INY
-LDA (DP),Y
-number_fetch_1:
-SEC
-SBC #$30
-BMI number_fail
-CMP #$a
-BMI number_skip_ascii
-SBC #$07
-CMP #$0a
-BMI number_fail
-CMP #$24
-BPL number_fail
-number_skip_ascii:
-CMP BASE
-BPL number_fail
-ADC $00
-STA $00
-TYA
-CMP $05
-BEQ number_end
-LDA BASE
-STA $04
-JSR multiply
-JMP number_fetch_loop
-number_fail:
-LDX #0
-STX $00
-STX $01
-JSR pushDS
-JMP next
+	INY
+	LDA (DP),Y
+number_fetch_1:         ;conver char to value
+	SEC
+	SBC #$30            ;#$30 - #$3a is 0-9
+	BMI number_fail
+	CMP #$a
+	BMI number_skip_ascii
+	SBC #$07            ;shift to letters
+	CMP #$0a            ;if <A fail
+	BMI number_fail
+	CMP #$24            ;if >Z fail
+	BPL number_fail
+number_skip_ascii:     
+	CMP BASE
+	BPL number_fail
+	ADC $00            ;add to existing number (carry happens in multiply)
+	STA $00
+	TYA
+	CMP $05            ;check string end
+	BEQ number_end
+	LDA BASE           
+	STA $04            ;shift number left by BASE
+	JSR multiply
+	JMP number_fetch_loop
+number_fail:           ;if fails push a 0
+	LDX #0
+	STX $00
+	STX $01
+	JSR pushDS
+	JMP next
 number_end:
-LDX #0
-LDY #1
-LDA (DP),Y
-CMP #$2d
-BNE number_end_2
-JSR _two_comp
+	LDX #0
+	LDY #1
+	LDA (DP),Y
+	CMP #$2d          ;"-"
+	BNE number_end_2
+	JSR _two_comp     ;make negative if necessary
 number_end_2:
-JSR pushDS
-INX
-STX $00
-DEX
-STX $01
-JSR pushDS
-JMP next
+	JSR pushDS        ;push the number then a 1
+	INX
+	STX $00
+	DEX
+	STX $01
+	JSR pushDS
+	JMP next
 
 break:
 DCB $03
@@ -1830,117 +1842,127 @@ DCB "BRK~~"
 DCB :number
 break_1:
 DCB :break_1+$2
-BRK
-JMP next
+	BRK
+	JMP next
 
+;prints out the stack nondestructively
 dots:
 DCB $02
 DCB ".S~~~"
 DCB :break
 dots_1:
 DCB :colon
-DCB :sp_var_1
-DCB :cat_1
-DCB :_clitnum, $2, :plus_1
-DCB :dup_1, :_clitnum, $ff, :lt_1
-DCB :_if,$a
-DCB :dup_1, :spat_1, :dot_1
-DCB :_while,$17
-DCB :_clitnum, $2e "."
-DCB :echo_1
-DCB :drop_1
-DCB :semi
+	DCB :sp_var_1
+	DCB :cat_1                         
+	DCB :_clitnum, $2, :plus_1         ;get next address on stack
+	DCB :dup_1, :_clitnum, $ff, :lt_1  ;if past top of stack
+	DCB :_if,$a                        ;skip while
+	DCB :dup_1, :spat_1, :dot_1
+	DCB :_while,$17                    ;-> dup_1,:clitnum...
+	DCB :_clitnum, $2e                 ;"." 
+	DCB :echo_1
+	DCB :drop_1
+	DCB :semi
 
+;DUP .
 ddot:
 DCB $02
 DCB "D.~~~"
 DCB :dots
 ddot_1:
 DCB :colon
-DCB :dup_1
-DCB :dot_1
-DCB :semi
+	DCB :dup_1
+	DCB :dot_1
+	DCB :semi
 
+;prints out a number from the stack
 dot:
 DCB $01
 DCB ".~~~~"
 DCB :ddot
 dot_1:
 DCB :colon
-DCB :dup_1,:zero_lt_1
-DCB :r_left_1
-DCB :abs_1
-DCB :_clitnum,$0
-DCB :aspace_1
-DCB :lrot_1
-DCB :digascii_1
-DCB :dup_1
-DCB :_if,$04
-DCB :_while,$09
-DCB :drop_1
-DCB :r_right_1
-DCB :_if,$4
-DCB :_clitnum, $2d
-DCB :display_1
-DCB :semi
+	DCB :dup_1,:zero_lt_1
+	DCB :r_left_1     ;put <0? on rstack
+	DCB :abs_1
+	DCB :_clitnum,$0  ;terminating null
+	DCB :aspace_1
+	DCB :lrot_1       ;stack is now 0 SPC NUM <
+	DCB :digascii_1   ;pull out a digit
+	DCB :dup_1        ;if remainder!=0
+	DCB :_if,$04
+	DCB :_while,$09   ;->digascii_1
+	DCB :drop_1       ;else drop remainder
+	DCB :r_right_1    ;if <0 print "-"
+	DCB :_if,$4
+	DCB :_clitnum, $2d   ;"-"
+	DCB :display_1    ;display the result
+	DCB :semi
 
+;prints out char codes from the stack
+;until it hits a zero
 display:
 DCB $07
 DCB "DISPL"
 DCB :dot
 display_1:
 DCB :colon
-DCB :dup_1
-DCB :_if,$06
-DCB :echo_1
-DCB :_while,$09
-DCB :drop_1
-DCB :semi
+	DCB :dup_1
+	DCB :_if,$06 ;-> drop_1
+	DCB :echo_1
+	DCB :_while,$09 ;->dup_1
+	DCB :drop_1
+	DCB :semi
 
+;takes a number on the stack
+;pulls out a digit into ascii
+;returns CHAR REMAINDER <
 digascii:
 DCB $08
 DCB "DIGAS"
 DCB :display
 digascii_1:
 DCB :colon
-DCB :_clitnum,BASE
-DCB :cat_1
-DCB :modslash_1
-DCB :ascii_1
-DCB :swap_1
-DCB :semi
+	DCB :_clitnum,BASE
+	DCB :cat_1
+	DCB :modslash_1
+	DCB :ascii_1
+	DCB :swap_1
+	DCB :semi
 
+;number -> its char code
 ascii:
 DCB $05
 DCB "ASCII"
 DCB :digascii
 ascii_1:
 DCB :ascii_1+$2
-LDX #0
-JSR popDS
-LDA $00
-CLC
-ADC #$37
-CMP #$41
-BPL ascii_end
-SBC #$6
+	LDX #0
+	JSR popDS
+	LDA $00
+	CLC
+	ADC #$37
+	CMP #$41
+	BPL ascii_end
+	SBC #$6
 ascii_end:
-STA $00
-JSR pushDS
-JMP next
+	STA $00
+	JSR pushDS
+	JMP next
 
+;prints one char code from stack
 echo:
 DCB $04
 DCB "ECHO~"
 DCB :ascii
 echo_1:
 DCB :echo_1+$2
-LDX #0
-JSR popDS
-LDA $00
-JSR draw_char
-JSR cursor_fwd
-JMP next
+	LDX #0
+	JSR popDS
+	LDA $00
+	JSR draw_char
+	JSR cursor_fwd
+	JMP next
 
 clear:
 DCB $5
@@ -1948,80 +1970,82 @@ DCB "CLEAR"
 DCB :echo
 clear_1:
 DCB :clear_1+$2
-JSR clear_screen
-JSR reset_cursor
-JMP next
+	JSR clear_screen
+	JSR reset_cursor
+	JMP next
 
+;searches the dictionary for last token entered
 search:
 DCB $06
 DCB "SEARC"
 DCB :clear
 search_1:
 DCB :search_1+$2
-LDX #CONTEXT
-JSR pushDS
-LDX #0
-JSR popDS
-LDY #0
-LDA (DP),Y
-CMP #$5
-BMI search_2
-LDA #$5
+	LDX #CONTEXT
+	JSR pushDS
+	LDX #0
+	JSR popDS
+	LDY #0
+	LDA (DP),Y
+	CMP #$5
+	BMI search_2
+	LDA #$5
 search_2:
-STA $02
-JMP search_comp
+	STA $02
+	JMP search_comp
 search_walk_list:
-LDY #$6
-LDA ($00),Y
-PHA
-INY
-LDA ($00),Y
-STA $01
-PLA
-STA $00
+	LDY #$6
+	LDA ($00),Y
+	PHA
+	INY
+	LDA ($00),Y
+	STA $01
+	PLA
+	STA $00
 search_comp:
-LDA $01
-BEQ search_term
-LDY $02
+	LDA $01
+	BEQ search_term
+	LDY $02
 search_comp_loop:
-LDA (DP),Y
-CMP ($00),Y
-BNE search_walk_list
-DEY
-BPL search_comp_loop
-LDA $00
-CLC
-ADC #$08
-BCC search_skip_carry
-INC $01
+	LDA (DP),Y
+	CMP ($00),Y
+	BNE search_walk_list
+	DEY
+	BPL search_comp_loop
+	LDA $00
+	CLC
+	ADC #$08
+	BCC search_skip_carry
+	INC $01
 search_skip_carry:
-STA $00
-LDX #0
-JSR pushDS
-LDX #0
-STX $00
-STX $01
-JSR pushDS
-JMP next
+	STA $00
+	LDX #0
+	JSR pushDS
+	LDX #0
+	STX $00
+	STX $01
+	JSR pushDS
+	JMP next
 search_term:
-LDX #1
-STX $00
-DEX
-JSR pushDS
-JMP next
+	LDX #1
+	STX $00
+	DEX
+	JSR pushDS
+	JMP next
 
+;pushes an ascii space
 aspace:
 DCB $06
 DCB "ASPAC"
 DCB :search
 aspace_1:
 DCB :aspace_1+$2
-LDX #0
-STX $01
-LDA #$20
-STA $00
-JSR pushDS
-JMP next
+	LDX #0
+	STX $01
+	LDA #$20
+	STA $00
+	JSR pushDS
+	JMP next
 
 token:
 DCB $05
@@ -2149,7 +2173,6 @@ DCB :start
 DCB $ff,$ff
 
 
-*=$d800
 dict_start:
 
 
