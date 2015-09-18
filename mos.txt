@@ -208,24 +208,25 @@ cursor_flash_loop:
   RTS
 
 
-
+;takes char code in A
+;sets D_BMP_? to point to bitmap
 lookup_key:
   SEC
-  SBC #$20
+  SBC #$20          ;bitmaps start with $20
   BPL lookup_key_1
-  LDA #$20
+  LDA #$20          ;< $20 becomes $20
 lookup_key_1:
   CMP #50
   BCS lookup_key_p2
   LDX #>keytable1
   STX D_BMP_H
-  BMI lookup_key_2
+  BMI lookup_key_2  ;always
 lookup_key_p2:
   LDX #>keytable2
   STX D_BMP_H
   SEC
   SBC #50
-  lookup_key_2:
+lookup_key_2: ;D_BMP_L = A*5
   STA D_BMP_L
   ASL A
   ASL A
@@ -1129,10 +1130,10 @@ DCB "EXECU"
 DCB $00,$00
 execute_1:
 DCB :execute_1+$2
-	LDX #WA
-	JSR popDS
-	CLC
-	JMP run
+  LDX #WA
+  JSR popDS
+  CLC
+  JMP run
 
 
 r_left:
@@ -1141,10 +1142,10 @@ DCB "<R~~~"
 DCB :execute
 r_left_1:
 DCB :r_left_1+$2
-	LDX #0
-	JSR popDS
-	JSR pushRS
-	JMP next
+  LDX #0
+  JSR popDS
+  JSR pushRS
+  JMP next
 
 
 r_right:
@@ -1153,10 +1154,10 @@ DCB "R>~~~"
 DCB :r_left
 r_right_1:
 DCB :r_right_1+$2
-	LDX #0
-	JSR popRS
-	JSR pushDS
-	JMP next
+  LDX #0
+  JSR popRS
+  JSR pushDS
+  JMP next
 
 
 over:
@@ -1206,30 +1207,30 @@ DCB "RROT~"
 DCB :dup
 rrot_1:
 DCB :rrot_1+$2
-	LDY SP
-	TYA
-	CLC
-	ADC #$04
-	TAX
-	LDA DSTACK,X   ;bottom
-	STA $00        ;->temp
-	LDA DSTACKH,X
-	STA $01
-	LDA DSTACK,Y   ;top
-	STA DSTACK,X   ;->bottom
-	LDA DSTACKH,Y
-	STA DSTACKH,X
-	DEX
-	DEX
-	LDA DSTACK,X  ;mid
-	STA DSTACK,Y  ;->top
-	LDA DSTACKH,X
-	STA DSTACKH,Y
-	LDA $00       ;temp
-	STA DSTACK,X  ;->mid
-	LDA $01
-	STA DSTACKH,X
-	JMP next
+  LDY SP
+  TYA
+  CLC
+  ADC #$04
+  TAX
+  LDA DSTACK,X   ;bottom
+  STA $00        ;->temp
+  LDA DSTACKH,X
+  STA $01
+  LDA DSTACK,Y   ;top
+  STA DSTACK,X   ;->bottom
+  LDA DSTACKH,Y
+  STA DSTACKH,X
+  DEX
+  DEX
+  LDA DSTACK,X  ;mid
+  STA DSTACK,Y  ;->top
+  LDA DSTACKH,X
+  STA DSTACKH,Y
+  LDA $00       ;temp
+  STA DSTACK,X  ;->mid
+  LDA $01
+  STA DSTACKH,X
+  JMP next
 
 ;lrot if top of stack on right
 lrot:
@@ -1238,30 +1239,30 @@ DCB "LROT~"
 DCB :rrot
 lrot_1:
 DCB :lrot_1+$2
-	LDX SP
-	LDA DSTACK,X
-	STA $00
-	LDA DSTACKH,X
-	STA $01
-	TXA
-	CLC
-	ADC #$04
-	TAY
-	LDA DSTACK,Y
-	STA DSTACK,X
-	LDA DSTACKH,Y
-	STA DSTACKH,X
-	INX
-	INX
-	LDA DSTACK,X
-	STA DSTACK,Y
-	LDA DSTACKH,X
-	STA DSTACKH,Y
-	LDA $00
-	STA DSTACK,X
-	LDA $01
-	STA DSTACKH,X
-	JMP next
+  LDX SP
+  LDA DSTACK,X
+  STA $00
+  LDA DSTACKH,X
+  STA $01
+  TXA
+  CLC
+  ADC #$04
+  TAY
+  LDA DSTACK,Y
+  STA DSTACK,X
+  LDA DSTACKH,Y
+  STA DSTACKH,X
+  INX
+  INX
+  LDA DSTACK,X
+  STA DSTACK,Y
+  LDA DSTACKH,X
+  STA DSTACKH,Y
+  LDA $00
+  STA DSTACK,X
+  LDA $01
+  STA DSTACKH,X
+  JMP next
 
 swap:
 DCB $04
@@ -1269,15 +1270,15 @@ DCB "SWAP~"
 DCB :lrot
 swap_1:
 DCB :swap_1+$2
-	LDX #0
-	JSR popDS
-	LDX #2
-	JSR popDS
-	LDX #0
-	JSR pushDS
-	LDX #2
-	JSR pushDS
-	JMP next
+  LDX #0
+  JSR popDS
+  LDX #2
+  JSR popDS
+  LDX #0
+  JSR pushDS
+  LDX #2
+  JSR pushDS
+  JMP next
 
 and:
 DCB $03
@@ -1285,16 +1286,16 @@ DCB "AND~~"
 DCB :swap
 and_1:
 DCB :and_1+$2
-	LDX #0
-	JSR popDS
-	LDY SP
-	LDA $00
-	AND DSTACK,Y
-	STA DSTACK,Y
-	LDA $01
-	AND DSTACKH,Y
-	STA DSTACKH,Y
-	JMP next
+  LDX #0
+  JSR popDS
+  LDY SP
+  LDA $00
+  AND DSTACK,Y
+  STA DSTACK,Y
+  LDA $01
+  AND DSTACKH,Y
+  STA DSTACKH,Y
+  JMP next
 
 not:
 DCB $03
@@ -1302,20 +1303,20 @@ DCB "NOT~~"
 DCB :and
 not_1:
 DCB :not_1+$2
-	LDX #0
-	JSR popDS
-	LDA $00
-	ORA $01
-	BEQ not_f
-	LDA #0
-	BEQ not_end
+  LDX #0
+  JSR popDS
+  LDA $00
+  ORA $01
+  BEQ not_f
+  LDA #0
+  BEQ not_end
 not_f:
-	LDA #1
+  LDA #1
 not_end:
-	STA $00
-	STX $01
-	JSR pushDS
-	JMP next
+  STA $00
+  STX $01
+  JSR pushDS
+  JMP next
 
 modslash:
 DCB $04
@@ -1323,16 +1324,16 @@ DCB "MOD/~"
 DCB :not
 modslash_1:
 DCB :modslash_1+$2
-	LDX #2
-	JSR popDS
-	LDX #0
-	JSR popDS
-	JSR divide
-	LDX #$03
-	JSR pushDS
-	LDX #$05
-	JSR pushDS
-	JMP next
+  LDX #2
+  JSR popDS
+  LDX #0
+  JSR popDS
+  JSR divide
+  LDX #$03
+  JSR pushDS
+  LDX #$05
+  JSR pushDS
+  JMP next
 
 slash:
 DCB $01
@@ -1340,14 +1341,14 @@ DCB "/~~~~"
 DCB :modslash
 slash_1:
 DCB :slash_1+$2
-	LDX #2
-	JSR popDS
-	LDX #0
-	JSR popDS
-	JSR divide
-	LDX #$03
-	JSR pushDS
-	JMP next
+  LDX #2
+  JSR popDS
+  LDX #0
+  JSR popDS
+  JSR divide
+  LDX #$03
+  JSR pushDS
+  JMP next
 
 star:
 DCB $01
@@ -1355,14 +1356,14 @@ DCB "*~~~~"
 DCB :slash
 star_1:
 DCB :star_1+$2
-	LDX #4
-	JSR popDS
-	LDX #0
-	JSR popDS
-	JSR multiply
-	LDX #0
-	JSR pushDS
-	JMP next
+  LDX #4
+  JSR popDS
+  LDX #0
+  JSR popDS
+  JSR multiply
+  LDX #0
+  JSR pushDS
+  JMP next
 
 bang:
 DCB $01
@@ -1370,16 +1371,16 @@ DCB "!~~~~"
 DCB :star
 bang_1:
 DCB :bang_1+$2
-	LDX #2
-	JSR popDS
-	LDX #0
-	JSR popDS
-	LDA $00
-	STA ($02,X)
-	INY
-	LDA $01
-	STA ($02,X)
-	JMP next
+  LDX #2
+  JSR popDS
+  LDX #0
+  JSR popDS
+  LDA $00
+  STA ($02,X)
+  INY
+  LDA $01
+  STA ($02,X)
+  JMP next
 
 cbang:
 DCB $02
@@ -1387,13 +1388,13 @@ DCB "C!~~~"
 DCB :bang
 cbang_1:
 DCB :cbang_1+$2
-	LDX #2
-	JSR popDS
-	LDX #0
-	JSR popDS
-	LDA $00
-	STA ($02,X)
-	JMP next
+  LDX #2
+  JSR popDS
+  LDX #0
+  JSR popDS
+  LDA $00
+  STA ($02,X)
+  JMP next
 
 at:
 DCB $01
@@ -1401,18 +1402,18 @@ DCB "@~~~~"
 DCB :cbang
 at_1:
 DCB :at_1+$2
-	LDX SP
-	LDA DSTACK,X
-	STA $00
-	LDA DSTACKH,X
-	STA $01
-	LDY #0
-	LDA ($00),Y
-	STA DSTACK,X
-	INY
-	LDA ($00),Y
-	STA DSTACKH,X
-	JMP next
+  LDX SP
+  LDA DSTACK,X
+  STA $00
+  LDA DSTACKH,X
+  STA $01
+  LDY #0
+  LDA ($00),Y
+  STA DSTACK,X
+  INY
+  LDA ($00),Y
+  STA DSTACKH,X
+  JMP next
 
 cat:
 DCB $02
@@ -1420,17 +1421,17 @@ DCB "C@~~~"
 DCB :at
 cat_1:
 DCB :cat_1+$2
-	LDX SP
-	LDA DSTACK,X
-	STA $00
-	LDA DSTACKH,X
-	STA $01
-	LDA #0
-	STA DSTACKH,X
-	TAY
-	LDA ($00),Y
-	STA DSTACK,X
-	JMP next
+  LDX SP
+  LDA DSTACK,X
+  STA $00
+  LDA DSTACKH,X
+  STA $01
+  LDA #0
+  STA DSTACKH,X
+  TAY
+  LDA ($00),Y
+  STA DSTACK,X
+  JMP next
 
 plus:
 DCB $01
@@ -1438,19 +1439,19 @@ DCB "+~~~~"
 DCB :cat
 plus_1:
 DCB :plus_1+$2
-	LDX #2
-	JSR popDS
-	LDX #0
-	JSR popDS
-	CLC
-	LDA $02
-	ADC $00
-	STA $00
-	LDA $03
-	ADC $01
-	STA $01
-	JSR pushDS
-	JMP next
+  LDX #2
+  JSR popDS
+  LDX #0
+  JSR popDS
+  CLC
+  LDA $02
+  ADC $00
+  STA $00
+  LDA $03
+  ADC $01
+  STA $01
+  JSR pushDS
+  JMP next
 
 minus:
 DCB $01
@@ -1458,19 +1459,19 @@ DCB "-~~~~"
 DCB :plus
 minus_1:
 DCB :minus_1+$2
-	LDX #2
-	JSR popDS
-	LDX #0
-	JSR popDS
-	SEC
-	LDA $00
-	SBC $02
-	STA $00
-	LDA $01
-	SBC $03
-	STA $01
-	JSR pushDS
-	JMP next
+  LDX #2
+  JSR popDS
+  LDX #0
+  JSR popDS
+  SEC
+  LDA $00
+  SBC $02
+  STA $00
+  LDA $01
+  SBC $03
+  STA $01
+  JSR pushDS
+  JMP next
 
 twocomp:
 DCB $5
@@ -1478,11 +1479,11 @@ DCB "2COMP"
 DCB :minus
 twocomp_1:
 DCB :twocomp_1+$2
-	LDX #0
-	JSR popDS
-	JSR _two_comp
-	JSR pushDS
-	JMP next
+  LDX #0
+  JSR popDS
+  JSR _two_comp
+  JSR pushDS
+  JMP next
 
 abs:
 DCB $3
@@ -1490,15 +1491,15 @@ DCB "ABS~~"
 DCB :twocomp
 abs_1:
 DCB :abs_1+$2
-	LDY SP
-	LDA DSTACKH,Y
-	BPL abs_end
-	LDX #0
-	JSR popDS
-	JSR _two_comp
-	JSR pushDS
+  LDY SP
+  LDA DSTACKH,Y
+  BPL abs_end
+  LDX #0
+  JSR popDS
+  JSR _two_comp
+  JSR pushDS
 abs_end:
-	JMP next
+  JMP next
 
 eq:
 DCB $1
@@ -1506,9 +1507,9 @@ DCB "=~~~~"
 DCB :abs
 eq_1:
 DCB :eq_1+$2
-	JSR stack_cmp
-	BNE cmp_f
-	BEQ cmp_t
+  JSR stack_cmp
+  BNE cmp_f
+  BEQ cmp_t
 
 lt:
 DCB $1
@@ -1516,9 +1517,9 @@ DCB "<~~~~"
 DCB :eq
 lt_1:
 DCB :lt_1+$2
-	JSR stack_cmp
-	BCS cmp_f
-	BCC cmp_t
+  JSR stack_cmp
+  BCS cmp_f
+  BCC cmp_t
 
 gt:
 DCB $1
@@ -1526,10 +1527,10 @@ DCB ">~~~~"
 DCB :lt
 gt_1:
 DCB :gt_1+$2
-	JSR stack_cmp
-	BCC cmp_f
-	BEQ cmp_f
-	BCS cmp_t
+  JSR stack_cmp
+  BCC cmp_f
+  BEQ cmp_f
+  BCS cmp_t
 
 lte:
 DCB $2
@@ -1537,21 +1538,21 @@ DCB "<=~~~"
 DCB :gt
 lte_1:
 DCB :lte_1+$2
-	JSR stack_cmp
-	BCC cmp_t
-	BEQ cmp_t
-	BCS cmp_f
+  JSR stack_cmp
+  BCC cmp_t
+  BEQ cmp_t
+  BCS cmp_f
 
 
 ;Used by all comparisons
 cmp_f:
-	LDA #0
-	JSR pushByte
-	JMP next
+  LDA #0
+  JSR pushByte
+  JMP next
 cmp_t:
-	LDA #1
-	JSR pushByte
-	JMP next
+  LDA #1
+  JSR pushByte
+  JMP next
 
 
 gte:
@@ -1560,9 +1561,9 @@ DCB ">=~~~"
 DCB :lte
 gte_1:
 DCB :gte_1+$2
-	JSR stack_cmp
-	BCC cmp_f
-	BCS cmp_t
+  JSR stack_cmp
+  BCC cmp_f
+  BCS cmp_t
 
 zero_eq:
 DCB $2
@@ -1570,9 +1571,9 @@ DCB "0=~~~"
 DCB :gte
 zero_eq_1:
 DCB :zero_eq_1+$2
-	JSR zero_cmp
-	BEQ cmp_t
-	BNE cmp_f
+  JSR zero_cmp
+  BEQ cmp_t
+  BNE cmp_f
 
 zero_lt:
 DCB $2
@@ -1580,9 +1581,9 @@ DCB "0<~~~"
 DCB :zero_eq
 zero_lt_1:
 DCB :zero_lt_1+$2
-	JSR zero_cmp
-	BCC cmp_t
-	BCS cmp_f
+  JSR zero_cmp
+  BCC cmp_t
+  BCS cmp_f
 
 constant:
 DCB $08
@@ -1593,15 +1594,15 @@ DCB :colon
 ;todo
 DCB :semi
 constant_scode:
-	LDY #1
-	LDA (WA),Y
-	STA $01
-	DEY
-	LDA (WA),Y
-	STA $00
-	LDX #0
-	JSR pushDS
-	JMP next
+  LDY #1
+  LDA (WA),Y
+  STA $01
+  DEY
+  LDA (WA),Y
+  STA $00
+  LDX #0
+  JSR pushDS
+  JMP next
 
 variable:
 DCB $08
@@ -1612,9 +1613,9 @@ DCB :colon
 ;todo
 DCB :semi
 variable_scode:
-	LDX #WA
-	JSR pushDS
-	JMP next
+  LDX #WA
+  JSR pushDS
+  JMP next
 
 base_var:
 DCB $04
@@ -1622,7 +1623,7 @@ DCB "BASE~"
 DCB :variable
 base_var_1:
 DCB :constant_scode
-	DCB BASE,$00
+  DCB BASE,$00
 
 sp_var:
 DCB $02
@@ -1630,7 +1631,7 @@ DCB "SP~~~"
 DCB :base_var
 sp_var_1:
 DCB :constant_scode
-	DCB SP,$00
+  DCB SP,$00
 
 rsp_var:
 DCB $03
@@ -1638,7 +1639,7 @@ DCB "RSP~~"
 DCB :sp_var
 rsp_var_1:
 DCB :constant_scode
-	DCB RSP,$00
+  DCB RSP,$00
 
 sp_base:
 DCB $03
@@ -1646,7 +1647,7 @@ DCB "SPB~~"
 DCB :rsp_var
 sp_base_1:
 DCB :constant_scode
-	DCB :DSTACK
+  DCB :DSTACK
 
 rsp_base:
 DCB $04
@@ -1654,7 +1655,7 @@ DCB "RSPB~"
 DCB :sp_base
 rsp_base_1:
 DCB :constant_scode
-	DCB :RSTACK
+  DCB :RSTACK
 
 dp_var:
 DCB $02
@@ -1662,7 +1663,7 @@ DCB "DP~~~"
 DCB :rsp_base
 dp_var_1:
 DCB :constant_scode
-	DCB DP,$00
+  DCB DP,$00
 
 spat:
 DCB $3
@@ -1670,10 +1671,10 @@ DCB "SP@~~"
 DCB :dp_var
 spat_1:
 DCB :colon
-	DCB :sp_base_1
-	DCB :plus_1
-	DCB :at_1
-	DCB :semi
+  DCB :sp_base_1
+  DCB :plus_1
+  DCB :at_1
+  DCB :semi
 
 spbang:
 DCB $3
@@ -1681,10 +1682,10 @@ DCB "SP!~~"
 DCB :spat
 spbang_1:
 DCB :colon
-	DCB :sp_base_1
-	DCB :plus_1
-	DCB :bang_1
-	DCB :semi
+  DCB :sp_base_1
+  DCB :plus_1
+  DCB :bang_1
+  DCB :semi
 
 decimal:
 DCB $07
@@ -1692,9 +1693,9 @@ DCB "DECIM"
 DCB :spbang
 decimal_1:
 DCB :decimal_1+$2
-	LDA #$0a
-	STA BASE
-	JMP next
+  LDA #$0a
+  STA BASE
+  JMP next
 
 hex:
 DCB $03
@@ -1702,9 +1703,9 @@ DCB "HEX~~"
 DCB :decimal
 hex_1:
 DCB :hex_1+$2
-	LDA #$10
-	STA BASE
-	JMP next
+  LDA #$10
+  STA BASE
+  JMP next
 
 ;When input fails to parse, 
 ;test if empty string or complain ('?')
@@ -1715,29 +1716,29 @@ DCB "QUEST"
 DCB :hex
 question_1:
 DCB :question_1+$2
-	LDX #0
-	LDA (DP,X)
-	BEQ question_ok
-	TAY
-	INY
-	LDA #$20
-	STA (DP),Y
-	INY
-	LDA #$3f
-	STA (DP),Y
-	TYA
-	STA (DP,X)
-	LDX #DP
-	JSR pushDS
-	JMP _patch+$2
-	question_ok:
-	LDA #<okmsg
-	STA $00
-	LDA #>okmsg
-	STA $01
-	LDX #0
-	JSR pushDS
-	JMP next
+  LDX #0
+  LDA (DP,X)
+  BEQ question_ok
+  TAY
+  INY
+  LDA #$20
+  STA (DP),Y
+  INY
+  LDA #$3f
+  STA (DP),Y
+  TYA
+  STA (DP,X)
+  LDX #DP
+  JSR pushDS
+  JMP _patch+$2
+  question_ok:
+  LDA #<okmsg
+  STA $00
+  LDA #>okmsg
+  STA $01
+  LDX #0
+  JSR pushDS
+  JMP next
 
 qstack:
 DCB $06
@@ -1745,14 +1746,14 @@ DCB "?STAC"
 DCB :question
 qstack_1:
 DCB :colon
-	DCB :_clitnum,MODE
-	DCB :cat_1
-	DCB :_clitnum,$02
-	DCB :and_1
-	DCB :_if,$07
-	DCB :_litnum,:stackmsg
-	DCB :_patch
-	DCB :semi
+  DCB :_clitnum,MODE
+  DCB :cat_1
+  DCB :_clitnum,$02
+  DCB :and_1
+  DCB :_if,$07
+  DCB :_litnum,:stackmsg
+  DCB :_patch
+  DCB :semi
 
 qnumber:
 DCB $07
@@ -1760,9 +1761,9 @@ DCB "?NUMB"
 DCB :qstack
 qnumber_1:
 DCB :colon
-	DCB :number_1
-	DCB :not_1
-	DCB :semi
+  DCB :number_1
+  DCB :not_1
+  DCB :semi
 
 ;parses a text number into a stack number
 ;$00,$01 is result
@@ -1775,66 +1776,66 @@ DCB "NUMBE"
 DCB :qnumber
 number_1:
 DCB :number_1+$2
-	LDY #0
-	STY $00
-	STY $01
-	LDA (DP),Y
-	BEQ number_fail
-	STA $05
-	INY
-	LDA (DP),Y
-	CMP #$2d           ;if starts with "-", skip it
-	BNE number_fetch_1
-	LDA $05
-	CMP #$2
-	BMI number_fail
+  LDY #0
+  STY $00
+  STY $01
+  LDA (DP),Y
+  BEQ number_fail
+  STA $05
+  INY
+  LDA (DP),Y
+  CMP #$2d           ;if starts with "-", skip it
+  BNE number_fetch_1
+  LDA $05
+  CMP #$2
+  BMI number_fail
 number_fetch_loop:
-	INY
-	LDA (DP),Y
+  INY
+  LDA (DP),Y
 number_fetch_1:         ;conver char to value
-	SEC
-	SBC #$30            ;#$30 - #$3a is 0-9
-	BMI number_fail
-	CMP #$a
-	BMI number_skip_ascii
-	SBC #$07            ;shift to letters
-	CMP #$0a            ;if <A fail
-	BMI number_fail
-	CMP #$24            ;if >Z fail
-	BPL number_fail
+  SEC
+  SBC #$30            ;#$30 - #$3a is 0-9
+  BMI number_fail
+  CMP #$a
+  BMI number_skip_ascii
+  SBC #$07            ;shift to letters
+  CMP #$0a            ;if <A fail
+  BMI number_fail
+  CMP #$24            ;if >Z fail
+  BPL number_fail
 number_skip_ascii:     
-	CMP BASE
-	BPL number_fail
-	ADC $00            ;add to existing number (carry happens in multiply)
-	STA $00
-	TYA
-	CMP $05            ;check string end
-	BEQ number_end
-	LDA BASE           
-	STA $04            ;shift number left by BASE
-	JSR multiply
-	JMP number_fetch_loop
+  CMP BASE
+  BPL number_fail
+  ADC $00            ;add to existing number (carry happens in multiply)
+  STA $00
+  TYA
+  CMP $05            ;check string end
+  BEQ number_end
+  LDA BASE           
+  STA $04            ;shift number left by BASE
+  JSR multiply
+  JMP number_fetch_loop
 number_fail:           ;if fails push a 0
-	LDX #0
-	STX $00
-	STX $01
-	JSR pushDS
-	JMP next
+  LDX #0
+  STX $00
+  STX $01
+  JSR pushDS
+  JMP next
 number_end:
-	LDX #0
-	LDY #1
-	LDA (DP),Y
-	CMP #$2d          ;"-"
-	BNE number_end_2
-	JSR _two_comp     ;make negative if necessary
+  LDX #0
+  LDY #1
+  LDA (DP),Y
+  CMP #$2d          ;"-"
+  BNE number_end_2
+  JSR _two_comp     ;make negative if necessary
 number_end_2:
-	JSR pushDS        ;push the number then a 1
-	INX
-	STX $00
-	DEX
-	STX $01
-	JSR pushDS
-	JMP next
+  JSR pushDS        ;push the number then a 1
+  INX
+  STX $00
+  DEX
+  STX $01
+  JSR pushDS
+  JMP next
 
 break:
 DCB $03
@@ -1842,8 +1843,8 @@ DCB "BRK~~"
 DCB :number
 break_1:
 DCB :break_1+$2
-	BRK
-	JMP next
+  BRK
+  JMP next
 
 ;prints out the stack nondestructively
 dots:
@@ -1852,17 +1853,17 @@ DCB ".S~~~"
 DCB :break
 dots_1:
 DCB :colon
-	DCB :sp_var_1
-	DCB :cat_1                         
-	DCB :_clitnum, $2, :plus_1         ;get next address on stack
-	DCB :dup_1, :_clitnum, $ff, :lt_1  ;if past top of stack
-	DCB :_if,$a                        ;skip while
-	DCB :dup_1, :spat_1, :dot_1
-	DCB :_while,$17                    ;-> dup_1,:clitnum...
-	DCB :_clitnum, $2e                 ;"." 
-	DCB :echo_1
-	DCB :drop_1
-	DCB :semi
+  DCB :sp_var_1
+  DCB :cat_1                         
+  DCB :_clitnum, $2, :plus_1         ;get next address on stack
+  DCB :dup_1, :_clitnum, $ff, :lt_1  ;if past top of stack
+  DCB :_if,$a                        ;skip while
+  DCB :dup_1, :spat_1, :dot_1
+  DCB :_while,$17                    ;-> dup_1,:clitnum...
+  DCB :_clitnum, $2e                 ;"." 
+  DCB :echo_1
+  DCB :drop_1
+  DCB :semi
 
 ;DUP .
 ddot:
@@ -1871,9 +1872,9 @@ DCB "D.~~~"
 DCB :dots
 ddot_1:
 DCB :colon
-	DCB :dup_1
-	DCB :dot_1
-	DCB :semi
+  DCB :dup_1
+  DCB :dot_1
+  DCB :semi
 
 ;prints out a number from the stack
 dot:
@@ -1882,22 +1883,22 @@ DCB ".~~~~"
 DCB :ddot
 dot_1:
 DCB :colon
-	DCB :dup_1,:zero_lt_1
-	DCB :r_left_1     ;put <0? on rstack
-	DCB :abs_1
-	DCB :_clitnum,$0  ;terminating null
-	DCB :aspace_1
-	DCB :lrot_1       ;stack is now 0 SPC NUM <
-	DCB :digascii_1   ;pull out a digit
-	DCB :dup_1        ;if remainder!=0
-	DCB :_if,$04
-	DCB :_while,$09   ;->digascii_1
-	DCB :drop_1       ;else drop remainder
-	DCB :r_right_1    ;if <0 print "-"
-	DCB :_if,$4
-	DCB :_clitnum, $2d   ;"-"
-	DCB :display_1    ;display the result
-	DCB :semi
+  DCB :dup_1,:zero_lt_1
+  DCB :r_left_1     ;put <0? on rstack
+  DCB :abs_1
+  DCB :_clitnum,$0  ;terminating null
+  DCB :aspace_1
+  DCB :lrot_1       ;stack is now 0 SPC NUM <
+  DCB :digascii_1   ;pull out a digit
+  DCB :dup_1        ;if remainder!=0
+  DCB :_if,$04
+  DCB :_while,$09   ;->digascii_1
+  DCB :drop_1       ;else drop remainder
+  DCB :r_right_1    ;if <0 print "-"
+  DCB :_if,$4
+  DCB :_clitnum, $2d   ;"-"
+  DCB :display_1    ;display the result
+  DCB :semi
 
 ;prints out char codes from the stack
 ;until it hits a zero
@@ -1907,12 +1908,12 @@ DCB "DISPL"
 DCB :dot
 display_1:
 DCB :colon
-	DCB :dup_1
-	DCB :_if,$06 ;-> drop_1
-	DCB :echo_1
-	DCB :_while,$09 ;->dup_1
-	DCB :drop_1
-	DCB :semi
+  DCB :dup_1
+  DCB :_if,$06 ;-> drop_1
+  DCB :echo_1
+  DCB :_while,$09 ;->dup_1
+  DCB :drop_1
+  DCB :semi
 
 ;takes a number on the stack
 ;pulls out a digit into ascii
@@ -1923,12 +1924,12 @@ DCB "DIGAS"
 DCB :display
 digascii_1:
 DCB :colon
-	DCB :_clitnum,BASE
-	DCB :cat_1
-	DCB :modslash_1
-	DCB :ascii_1
-	DCB :swap_1
-	DCB :semi
+  DCB :_clitnum,BASE
+  DCB :cat_1
+  DCB :modslash_1
+  DCB :ascii_1
+  DCB :swap_1
+  DCB :semi
 
 ;number -> its char code
 ascii:
@@ -1937,18 +1938,18 @@ DCB "ASCII"
 DCB :digascii
 ascii_1:
 DCB :ascii_1+$2
-	LDX #0
-	JSR popDS
-	LDA $00
-	CLC
-	ADC #$37
-	CMP #$41
-	BPL ascii_end
-	SBC #$6
+  LDX #0
+  JSR popDS
+  LDA $00
+  CLC
+  ADC #$37
+  CMP #$41
+  BPL ascii_end
+  SBC #$6
 ascii_end:
-	STA $00
-	JSR pushDS
-	JMP next
+  STA $00
+  JSR pushDS
+  JMP next
 
 ;prints one char code from stack
 echo:
@@ -1957,12 +1958,12 @@ DCB "ECHO~"
 DCB :ascii
 echo_1:
 DCB :echo_1+$2
-	LDX #0
-	JSR popDS
-	LDA $00
-	JSR draw_char
-	JSR cursor_fwd
-	JMP next
+  LDX #0
+  JSR popDS
+  LDA $00
+  JSR draw_char
+  JSR cursor_fwd
+  JMP next
 
 clear:
 DCB $5
@@ -1970,9 +1971,9 @@ DCB "CLEAR"
 DCB :echo
 clear_1:
 DCB :clear_1+$2
-	JSR clear_screen
-	JSR reset_cursor
-	JMP next
+  JSR clear_screen
+  JSR reset_cursor
+  JMP next
 
 ;searches the dictionary for last token entered
 search:
@@ -1981,57 +1982,57 @@ DCB "SEARC"
 DCB :clear
 search_1:
 DCB :search_1+$2
-	LDX #CONTEXT
-	JSR pushDS
-	LDX #0
-	JSR popDS
-	LDY #0
-	LDA (DP),Y
-	CMP #$5
-	BMI search_2
-	LDA #$5
+  LDX #CONTEXT
+  JSR pushDS
+  LDX #0
+  JSR popDS
+  LDY #0
+  LDA (DP),Y
+  CMP #$5
+  BMI search_2
+  LDA #$5
 search_2:
-	STA $02
-	JMP search_comp
+  STA $02
+  JMP search_comp
 search_walk_list:
-	LDY #$6
-	LDA ($00),Y
-	PHA
-	INY
-	LDA ($00),Y
-	STA $01
-	PLA
-	STA $00
+  LDY #$6
+  LDA ($00),Y
+  PHA
+  INY
+  LDA ($00),Y
+  STA $01
+  PLA
+  STA $00
 search_comp:
-	LDA $01
-	BEQ search_term
-	LDY $02
+  LDA $01
+  BEQ search_term
+  LDY $02
 search_comp_loop:
-	LDA (DP),Y
-	CMP ($00),Y
-	BNE search_walk_list
-	DEY
-	BPL search_comp_loop
-	LDA $00
-	CLC
-	ADC #$08
-	BCC search_skip_carry
-	INC $01
+  LDA (DP),Y
+  CMP ($00),Y
+  BNE search_walk_list
+  DEY
+  BPL search_comp_loop
+  LDA $00
+  CLC
+  ADC #$08
+  BCC search_skip_carry
+  INC $01
 search_skip_carry:
-	STA $00
-	LDX #0
-	JSR pushDS
-	LDX #0
-	STX $00
-	STX $01
-	JSR pushDS
-	JMP next
+  STA $00
+  LDX #0
+  JSR pushDS
+  LDX #0
+  STX $00
+  STX $01
+  JSR pushDS
+  JMP next
 search_term:
-	LDX #1
-	STX $00
-	DEX
-	JSR pushDS
-	JMP next
+  LDX #1
+  STX $00
+  DEX
+  JSR pushDS
+  JMP next
 
 ;pushes an ascii space
 aspace:
@@ -2040,54 +2041,56 @@ DCB "ASPAC"
 DCB :search
 aspace_1:
 DCB :aspace_1+$2
-	LDX #0
-	STX $01
-	LDA #$20
-	STA $00
-	JSR pushDS
-	JMP next
+  LDX #0
+  STX $01
+  LDA #$20
+  STA $00
+  JSR pushDS
+  JMP next
 
+;pulls out the next token from the input text
+;put into free dictionary space
 token:
 DCB $05
 DCB "TOKEN"
 DCB :aspace
 token_1:
 DCB :token_1+$2
-LDX #0
-JSR popDS
-LDA $00
-CMP #$20
-BNE token_space_skip
-LDX buff_pos
-DEX
+  LDX #0
+  JSR popDS
+  LDA $00
+  CMP #$20
+  BNE token_space_skip
+  LDX buff_pos
+  DEX
 token_space_loop:
-INX
-LDA buff,X
-CMP #$20
-BEQ token_space_loop
-STX buff_pos
+  INX
+  LDA buff,X
+  CMP #$20
+  BEQ token_space_loop
+  STX buff_pos
 token_space_skip:
-LDX buff_pos
-LDY #0
+  LDX buff_pos
+  LDY #0
 token_real_loop:
-INY
-LDA buff,X
-BEQ token_end
-INX
-JSR make_uppercase
-STA (DP),Y
-CMP $00
-BEQ token_end_2
-BNE token_real_loop
+  INY
+  LDA buff,X
+  BEQ token_end
+  INX
+  JSR make_uppercase
+  STA (DP),Y
+  CMP $00
+  BEQ token_end_2
+  BNE token_real_loop
 token_end:
-INX
+  INX
 token_end_2:
-STX buff_pos
-DEY
-TYA
-LDX #0
-STA (DP,X)
-JMP next
+  STX buff_pos
+  DEY
+  TYA
+  LDX #0
+  STA (DP,X)
+  JMP next
 
 inline:
 DCB $06
@@ -2095,33 +2098,35 @@ DCB "INLIN"
 DCB :token
 inline_1:
 DCB :inline_1+$2
-JSR freshline
-LDA #39
-STA buff_size
-LDA #$3e
-JSR type_char
-JSR get_line
-LDA #0
-STA buff_pos
-JSR freshline
-JMP next
+  JSR freshline
+  LDA #39
+  STA buff_size
+  LDA #$3e
+  JSR type_char
+  JSR get_line
+  LDA #0
+  STA buff_pos
+  JSR freshline
+  JMP next
 
+;takes a string ptr off the stack
+;prints it out
 type:
 DCB $04
 DCB "TYPE~"
 DCB :inline
 type_1:
 DCB :type_1+$2
-LDX #P0L
-JSR popDS
-LDX #0
-LDA (P0L,X)
-INC P0L
-BCC type_2
-INC P0H
-type_2:
-JSR draw_string
-JMP next
+  LDX #P0L
+  JSR popDS
+  LDX #0
+  LDA (P0L,X)
+  INC P0L
+  BCC type_2
+  INC P0H
+  type_2:
+  JSR draw_string
+  JMP next
 
 start:
 DCB $05
@@ -2130,40 +2135,40 @@ DCB :type
 DCB $ff
 start_1:
 DCB :start_1+$2
-forth_start:
-LDA MODE
-AND #1
-BNE forth_restart
-JSR clear_screen
-JSR reset_cursor
-LDA #<startmsg
-STA WA
-LDA #>startmsg
-STA WAH
-LDA #<dict_start
-STA DP
-LDA #>dict_start
-STA DPH
-LDA #<last_dict
-STA CONTEXT
-LDA #>last_dict
-STA CONTEXTH
+  forth_start:
+  LDA MODE
+  AND #1
+  BNE forth_restart
+  JSR clear_screen
+  JSR reset_cursor
+  LDA #<startmsg
+  STA WA
+  LDA #>startmsg
+  STA WAH
+  LDA #<dict_start
+  STA DP
+  LDA #>dict_start
+  STA DPH
+  LDA #<last_dict
+  STA CONTEXT
+  LDA #>last_dict
+  STA CONTEXTH
 forth_restart:
-LDA #1
-STA MODE
-LDA #$0A
-STA BASE
-LDA #0
-STA SP
-STA RSP
-STA buff_pos
-LDA #<outer_interp
-STA IR
-LDA #>outer_interp
-STA IRH
-LDX #WA
-JSR pushDS
-JMP next
+  LDA #1
+  STA MODE
+  LDA #$0A
+  STA BASE
+  LDA #0
+  STA SP
+  STA RSP
+  STA buff_pos
+  LDA #<outer_interp
+  STA IR
+  LDA #>outer_interp
+  STA IRH
+  LDX #WA
+  JSR pushDS
+  JMP next
 
 
 last_dict:
@@ -2187,102 +2192,103 @@ RSTACKH:
 
 
 *=$fd00
+;character data
 keytable1:
-DCB $00,$00,$00,$00,$00
-DCB $00,$00,$fa,$00,$00
-DCB $a0,$c0,$00,$a0,$c0
-DCB $28,$7c,$28,$7c,$28
-DCB $20,$54,$fe,$54,$08
-DCB $48,$b0,$54,$1a,$24
-DCB $2c,$5a,$4a,$44,$0a
-DCB $00,$00,$a0,$c0,$00
-DCB $00,$38,$44,$82,$00
-DCB $00,$82,$44,$38,$00
-DCB $00,$50,$e0,$50,$00
-DCB $10,$10,$7c,$10,$10
-DCB $00,$00,$07,$06,$00
-DCB $10,$10,$10,$10,$10
-DCB $00,$00,$06,$06,$00
-DCB $06,$08,$10,$20,$c0
-DCB $7c,$8a,$92,$a2,$7c
-DCB $22,$42,$fe,$02,$02
-DCB $42,$86,$8a,$92,$62
-DCB $44,$92,$92,$92,$6c
-DCB $18,$28,$48,$fe,$08
-DCB $f2,$a2,$a2,$a2,$9c
-DCB $3c,$52,$92,$92,$8c
-DCB $86,$88,$90,$a0,$c0
-DCB $6c,$92,$92,$92,$6c
-DCB $64,$92,$92,$92,$7c
-DCB $00,$00,$66,$66,$00
-DCB $00,$00,$67,$66,$00
-DCB $10,$28,$28,$44,$44
-DCB $28,$28,$28,$28,$28
-DCB $44,$44,$28,$28,$10
-DCB $40,$80,$8a,$90,$60
-DCB $7c,$82,$9a,$aa,$78
-DCB $0e,$30,$d0,$30,$0e
-DCB $fe,$92,$92,$72,$0c
-DCB $38,$44,$82,$82,$44
-DCB $fe,$82,$82,$44,$38
-DCB $fe,$92,$92,$82,$82
-DCB $fe,$90,$90,$80,$80
-DCB $7c,$82,$82,$8a,$4e
-DCB $fe,$10,$10,$10,$fe
-DCB $82,$82,$fe,$82,$82
-DCB $82,$82,$fc,$80,$80
-DCB $fe,$10,$30,$48,$86
-DCB $fe,$02,$02,$02,$02
-DCB $fe,$30,$08,$30,$fe
-DCB $fe,$20,$10,$08,$fe
-DCB $7c,$82,$82,$82,$7c
-DCB $fe,$90,$90,$90,$60
-DCB $7c,$82,$8a,$84,$7a
+DCB $00,$00,$00,$00,$00   ;   $20
+DCB $00,$00,$fa,$00,$00   ;!  
+DCB $a0,$c0,$00,$a0,$c0   ;"  
+DCB $28,$7c,$28,$7c,$28   ;#  
+DCB $20,$54,$fe,$54,$08   ;$  
+DCB $48,$b0,$54,$1a,$24   ;%  
+DCB $2c,$5a,$4a,$44,$0a   ;&  
+DCB $00,$00,$a0,$c0,$00   ;'  
+DCB $00,$38,$44,$82,$00   ;(  $28
+DCB $00,$82,$44,$38,$00   ;)  
+DCB $00,$50,$e0,$50,$00   ;*  
+DCB $10,$10,$7c,$10,$10   ;+  
+DCB $00,$00,$07,$06,$00   ;,  
+DCB $10,$10,$10,$10,$10   ;-  
+DCB $00,$00,$06,$06,$00   ;.  
+DCB $06,$08,$10,$20,$c0   ;/  
+DCB $7c,$8a,$92,$a2,$7c   ;0  $30
+DCB $22,$42,$fe,$02,$02   ;1  
+DCB $42,$86,$8a,$92,$62   ;2  
+DCB $44,$92,$92,$92,$6c   ;3  
+DCB $18,$28,$48,$fe,$08   ;4  
+DCB $f2,$a2,$a2,$a2,$9c   ;5  
+DCB $3c,$52,$92,$92,$8c   ;6  
+DCB $86,$88,$90,$a0,$c0   ;7  
+DCB $6c,$92,$92,$92,$6c   ;8  
+DCB $64,$92,$92,$92,$7c   ;9  $39
+DCB $00,$00,$66,$66,$00   ;:  
+DCB $00,$00,$67,$66,$00   ;;  
+DCB $10,$28,$28,$44,$44   ;<  
+DCB $28,$28,$28,$28,$28   ;=  
+DCB $44,$44,$28,$28,$10   ;>  
+DCB $40,$80,$8a,$90,$60   ;?  
+DCB $7c,$82,$9a,$aa,$78   ;@  
+DCB $0e,$30,$d0,$30,$0e   ;A  $41
+DCB $fe,$92,$92,$72,$0c   ;B  
+DCB $38,$44,$82,$82,$44   ;C  
+DCB $fe,$82,$82,$44,$38   ;D  
+DCB $fe,$92,$92,$82,$82   ;E  
+DCB $fe,$90,$90,$80,$80   ;F  
+DCB $7c,$82,$82,$8a,$4e   ;G  
+DCB $fe,$10,$10,$10,$fe   ;H  $48
+DCB $82,$82,$fe,$82,$82   ;I  
+DCB $82,$82,$fc,$80,$80   ;J  
+DCB $fe,$10,$30,$48,$86   ;K  
+DCB $fe,$02,$02,$02,$02   ;L  
+DCB $fe,$30,$08,$30,$fe   ;M  
+DCB $fe,$20,$10,$08,$fe   ;N  
+DCB $7c,$82,$82,$82,$7c   ;O  
+DCB $fe,$90,$90,$90,$60   ;P  $50
+DCB $7c,$82,$8a,$84,$7a   ;Q  
 *=$fe00
 keytable2:
-DCB $fe,$90,$98,$94,$62
-DCB $62,$92,$92,$92,$8c
-DCB $80,$80,$fe,$80,$80
-DCB $fc,$02,$02,$02,$fc
-DCB $e0,$18,$06,$18,$e0
-DCB $f0,$0e,$30,$0e,$f0
-DCB $c6,$28,$10,$28,$c6
-DCB $c0,$20,$1e,$20,$c0
-DCB $86,$8a,$92,$a2,$c2
-DCB $00,$fe,$82,$82,$00
-DCB $c0,$20,$10,$08,$06
-DCB $00,$82,$82,$fe,$00
-DCB $20,$40,$80,$40,$20
-DCB $02,$02,$02,$02,$02
-DCB $00,$00,$80,$40,$00
-DCB $04,$2a,$2a,$1c,$02
-DCB $fe,$24,$22,$22,$1c
-DCB $1c,$22,$22,$22,$14
-DCB $1c,$22,$22,$24,$fe
-DCB $1c,$2a,$2a,$2a,$1a
-DCB $20,$20,$7e,$a0,$a0
-DCB $19,$25,$25,$15,$3e
-DCB $fe,$10,$20,$20,$1e
-DCB $02,$22,$be,$02,$02
-DCB $00,$22,$22,$22,$bc
-DCB $fe,$04,$08,$14,$22
-DCB $02,$82,$fe,$02,$02
-DCB $3e,$20,$1e,$20,$1e
-DCB $3e,$10,$20,$20,$1e
-DCB $1c,$22,$22,$22,$1c
-DCB $3f,$14,$22,$22,$1c
-DCB $1c,$22,$22,$14,$3f
-DCB $3e,$10,$20,$20,$10
-DCB $12,$2a,$2a,$2a,$24
-DCB $20,$20,$7c,$22,$22
-DCB $3c,$02,$02,$04,$3e
-DCB $38,$04,$02,$04,$38
-DCB $3c,$02,$3c,$02,$3c
-DCB $22,$14,$08,$14,$22
-DCB $32,$0a,$04,$08,$30
-DCB $22,$26,$2a,$32,$22
-DCB $10,$10,$6c,$82,$83
-DCB $00,$00,$fe,$00,$00
-DCB $82,$82,$6c,$10,$10
-DCB $10,$20,$10,$08,$10
-DCB $ff,$ff,$ff,$ff,$ff
+DCB $fe,$90,$98,$94,$62   ;R  $52
+DCB $62,$92,$92,$92,$8c   ;S
+DCB $80,$80,$fe,$80,$80   ;T
+DCB $fc,$02,$02,$02,$fc   ;U
+DCB $e0,$18,$06,$18,$e0   ;V
+DCB $f0,$0e,$30,$0e,$f0   ;W
+DCB $c6,$28,$10,$28,$c6   ;X  $58
+DCB $c0,$20,$1e,$20,$c0   ;Y
+DCB $86,$8a,$92,$a2,$c2   ;Z
+DCB $00,$fe,$82,$82,$00   ;[
+DCB $c0,$20,$10,$08,$06   ;\
+DCB $00,$82,$82,$fe,$00   ;]
+DCB $20,$40,$80,$40,$20   ;^
+DCB $02,$02,$02,$02,$02   ;_
+DCB $00,$00,$80,$40,$00   ;`  $60
+DCB $04,$2a,$2a,$1c,$02   ;a
+DCB $fe,$24,$22,$22,$1c   ;b
+DCB $1c,$22,$22,$22,$14   ;c
+DCB $1c,$22,$22,$24,$fe   ;d
+DCB $1c,$2a,$2a,$2a,$1a   ;e
+DCB $20,$20,$7e,$a0,$a0   ;f
+DCB $19,$25,$25,$15,$3e   ;g
+DCB $fe,$10,$20,$20,$1e   ;h  $68
+DCB $02,$22,$be,$02,$02   ;i
+DCB $00,$22,$22,$22,$bc   ;j
+DCB $fe,$04,$08,$14,$22   ;k
+DCB $02,$82,$fe,$02,$02   ;l
+DCB $3e,$20,$1e,$20,$1e   ;m
+DCB $3e,$10,$20,$20,$1e   ;n
+DCB $1c,$22,$22,$22,$1c   ;o
+DCB $3f,$14,$22,$22,$1c   ;p  $70
+DCB $1c,$22,$22,$14,$3f   ;q
+DCB $3e,$10,$20,$20,$10   ;r
+DCB $12,$2a,$2a,$2a,$24   ;s
+DCB $20,$20,$7c,$22,$22   ;t
+DCB $3c,$02,$02,$04,$3e   ;u
+DCB $38,$04,$02,$04,$38   ;v
+DCB $3c,$02,$3c,$02,$3c   ;w
+DCB $22,$14,$08,$14,$22   ;x  $78
+DCB $32,$0a,$04,$08,$30   ;y
+DCB $22,$26,$2a,$32,$22   ;z
+DCB $10,$10,$6c,$82,$82   ;{
+DCB $00,$00,$fe,$00,$00   ;|
+DCB $82,$82,$6c,$10,$10   ;}
+DCB $10,$20,$10,$08,$10   ;~  $7e
+DCB $ff,$ff,$ff,$ff,$ff   ;
