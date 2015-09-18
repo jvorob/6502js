@@ -2062,10 +2062,10 @@ function SimulatorWidget(node) {
       }
 
       if (command === "DEFINE") { return defines.define(param); }
+      if (command === "DCB") { return DCB(param); }
 
       param = param.replace(/[ ]/g, "");
 
-      if (command === "DCB") { return DCB(param); }
 
 
 
@@ -2096,6 +2096,8 @@ function SimulatorWidget(node) {
         }
         return true;
       }
+
+      param = param.replace(/ /g, "");
 
       values = param.split(",");
       if (values.length === 0) { return false; }
