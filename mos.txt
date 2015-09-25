@@ -24,19 +24,19 @@ define P0L $90
 define P0H $91
 define P1L $92
 define P1H $93
-define IR      $a0
-define IRH      $a1
-define WA      $a2
-define WAH      $a3
-define CONTEXT $a4
-define CONTEXTH $a5
-define CURRENT $a6
-define CURRENTH $a7
-define DP      $a8
+define IR      $a0     ;word, instruction reg
+define WA      $a2     ;word, word address (next word address?)
+define CONTEXT $a4     ;word, location to search dict from
+define CURRENT $a6     ;word, place to link entries to
+define DP      $a8     ;word, next free dictionary space
 define DPH      $a9
 define BASE    $aa
 define SP      $ab
 define RSP     $ac
+
+;1 bit is first start
+;2 bit is underflow
+;3 bit is state (true=compile)
 define MODE    $ad
 define esc_char $5c
 
@@ -895,11 +895,11 @@ multiply_end:
 
 popDS:
   LDY SP
-  BNE popDS_notoverflow
+  BNE popDS_notunderflow
   LDA MODE
   ORA #$02
-  STA MODE
-popDS_notoverflow:
+  STA MODE   ;set 2 bit (underflow)
+popDS_notunderflow:
   LDA DSTACK,Y
   STA $00,X
   INY
@@ -981,7 +981,7 @@ _if_f:
   BCS _if_incirh
   JMP next
 _if_incirh:
-  INC IRH
+  INC IR+1
   JMP next
 
 _end:
@@ -1005,7 +1005,7 @@ _while:
   BCC _while_decirh
   JMP next
 _while_decirh:
-  DEC IRH
+  DEC IR+1
   JMP next
 
 _litnum:
@@ -1084,7 +1084,7 @@ outer_interp:
 colon:
   LDY RSP
   DEY
-  LDA IRH
+  LDA IR+1
   STA RSTACK,Y
   DEY
   LDA IR
@@ -1092,8 +1092,8 @@ colon:
   STY RSP
   LDA WA
   STA IR
-  LDA WAH
-  STA IRH
+  LDA WA+1
+  STA IR+1
   JMP next
 
 semi:
@@ -1103,7 +1103,7 @@ semi:
   STA IR
   INY
   LDA RSTACK,Y
-  STA IRH
+  STA IR+1
   INY
   STY RSP
 next:
@@ -1113,22 +1113,22 @@ next:
   STA WA
   INY
   LDA (IR),Y
-  STA WAH
+  STA WA+1
   LDA IR
   ADC #$02
   STA IR
   BCC run
-  INC IRH
+  INC IR+1
   CLC
 run:
-  LDA WAH
+  LDA WA+1
   STA run_1+$2
   LDA WA
   STA run_1+$1
   ADC #$02
   STA WA
   BCC run_1
-  INC WAH
+  INC WA+1
 run_1:
   JMP ($0000)
 
@@ -1758,8 +1758,8 @@ qstack_1:
 DCB :colon
   DCB :_clitnum,MODE
   DCB :cat_1
-  DCB :_clitnum,$02
-  DCB :and_1
+  DCB :_clitnum,$02    ;check 2 bit (underflow)
+  DCB :and_1           ;&
   DCB :_if,$07
   DCB :_litnum,:stackmsg
   DCB :_patch
@@ -2147,14 +2147,14 @@ start_1:
 DCB :start_1+$2
   forth_start:
   LDA MODE
-  AND #1
+  AND #1        ;check 1-bit
   BNE forth_restart
   JSR clear_screen
   JSR reset_cursor
   LDA #<startmsg
   STA WA
   LDA #>startmsg
-  STA WAH
+  STA WA+1
   LDA #<dict_start
   STA DP
   LDA #>dict_start
@@ -2162,10 +2162,10 @@ DCB :start_1+$2
   LDA #<last_dict
   STA CONTEXT
   LDA #>last_dict
-  STA CONTEXTH
+  STA CONTEXT+1
 forth_restart:
   LDA #1
-  STA MODE
+  STA MODE     ;set 1 bit clear others
   LDA #$0A
   STA BASE
   LDA #0
@@ -2175,7 +2175,7 @@ forth_restart:
   LDA #<outer_interp
   STA IR
   LDA #>outer_interp
-  STA IRH
+  STA IR+1
   LDX #WA
   JSR pushDS
   JMP next
