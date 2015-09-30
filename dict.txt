@@ -1,0 +1,10 @@
+EXECU, <R, R>, OVER, DROP, DUP, RROT, LROT, SWAP,
+AND, NOT, MOD/, /, *, !, C!, @, C@, +, -, 2COMP,
+ABS, =, <, >, <=, >=, 0=, 0<, CONST, VARIA, BASE, 
+SP, RSP, SPB, RSPB, DP, ',', 'C,', SP@, SP!, 
+(TODO) HERE, `, ENTRY, CA!, SINGL(E)
+(TODO slightly after:) :, ;, if while, etc handlers
+DECIM, HEX, 
+QUEST, ?STAC, ?NUMB, NUMBE, 
+BRK, .S, D., ., DISPL, DIGAS, ASCII, ECHO, CLEAR, 
+SEARC, ASPAC, TOKEN, INLIN, TYPE, START, NULL, 
