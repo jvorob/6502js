@@ -1375,6 +1375,8 @@ DCB :star_1+$2
   JSR pushDS
   JMP next
 
+;stores stack(2) at stack(1)
+;2 bytes, little endian bytes
 bang:
 DCB $01
 DCB "!~~~~"
@@ -1386,10 +1388,11 @@ DCB :bang_1+$2
   LDX #0
   JSR popDS
   LDA $00
-  STA ($02,X)
-  INY
+  LDY #0
+  STA ($02),Y
+  INY 
   LDA $01
-  STA ($02,X)
+  STA ($02),Y
   JMP next
 
 cbang:
@@ -1675,10 +1678,46 @@ dp_var_1:
 DCB :constant_scode
   DCB DP,$00
 
+;Enclose a stack word in the dict
+comma:
+DCB $1
+DCB ",~~~~"
+DCB :dp_var
+comma_1:
+DCB :colon
+	DCB :_litnum, :DP
+	DCB :at_1
+	DCB :dup_1    
+	DCB :rrot_1          ;stack is daddr, word, daddr <
+	DCB :bang_1          ;add it to dict
+	DCB :_clitnum, 2
+	DCB :plus_1
+	DCB :_litnum, :DP
+	DCB :bang_1          ;advance dp 2
+	DCB :semi
+
+;Enclose a stack byte in the dict
+ccomma:
+DCB 2
+DCB "C,~~~"
+DCB :comma
+ccomma_1:
+DCB :colon
+	DCB :_litnum, :DP
+	DCB :at_1
+	DCB :dup_1    
+	DCB :rrot_1          ;stack is daddr, word, daddr <
+	DCB :cbang_1          ;add it to dict
+	DCB :_clitnum, 1
+	DCB :plus_1
+	DCB :_litnum, :DP
+	DCB :bang_1          ;advance dp 1
+	DCB :semi
+
 spat:
 DCB $3
 DCB "SP@~~"
-DCB :dp_var
+DCB :ccomma
 spat_1:
 DCB :colon
   DCB :sp_base_1
@@ -1696,6 +1735,7 @@ DCB :colon
   DCB :plus_1
   DCB :bang_1
   DCB :semi
+
 
 decimal:
 DCB $07
