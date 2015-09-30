@@ -1567,8 +1567,16 @@ function SimulatorWidget(node) {
 
     function updateMonitor() {
       if (monitoring) {
-        var start = parseInt($node.find('.start').val(), 16);
-        var length = parseInt($node.find('.length').val(), 16);
+        var starttext  = $node.find('.start').val();
+        var lengthtext = $node.find('.length').val();
+
+
+        start  = defines.parse("$" + starttext);
+        length = defines.parse("$" + lengthtext);
+        if(null === start)  start  = defines.parse(starttext);
+        if(null === length) length = defines.parse(lengthtext);
+        console.log(start);
+
         if (start >= 0 && length > 0) {
           $node.find('.monitor code').html(memory.format(start, length));
         }
