@@ -56,6 +56,7 @@ function SimulatorWidget(node) {
     $node.find('.updateButton').click(simulator.updateDebugInfo);
     $node.find('.stepButton').click(simulator.debugExec);
     $node.find('.gotoButton').click(simulator.gotoAddr);
+    $node.find('.unparser').keyup(simulator.updateUnparser);
     $node.find('.notesButton').click(ui.showNotes);
     $node.find('.code').keypress(simulator.stop);
     $node.find('.code').keypress(ui.initialize);
@@ -1575,13 +1576,27 @@ function SimulatorWidget(node) {
         length = defines.parse("$" + lengthtext);
         if(null === start)  start  = defines.parse(starttext);
         if(null === length) length = defines.parse(lengthtext);
-        console.log(start);
 
         if (start >= 0 && length > 0) {
           $node.find('.monitor code').html(memory.format(start, length));
         }
       }
     }
+
+	function updateUnparser() {
+		var text = $node.find(".unparser").val();
+		text = parseInt(text, 16);
+		label = labels.reverseLookup(text);
+		if(label === null) {
+			label = labels.reverseLookup(text - 2);
+		  if(label === null) {
+			label = "n/a";
+		  } else {
+			label += "+2";
+		  }
+		}
+		$node.find(".unparserOutput").text(label);
+	}
 
     // debugExec() - Execute one instruction and print values
     function debugExec() {
@@ -1599,6 +1614,18 @@ function SimulatorWidget(node) {
       for (var i = 7; i >=0; i--) {
         html += regP >> i & 1;
       }
+
+      //shows associated label for PC (if any)
+      html += "<br>";
+	  var label;
+	  if(debug) {
+		  label = labels.reverseLookup(regPC);
+		  if(label === null) label = labels.reverseLookup(regPC - 2);
+		  if(label === null) label = "n/a";
+      } else 
+	  {label = "-";}
+	  html += label;
+
       $node.find('.minidebugger').html(html);
       updateMonitor();
     }
@@ -1666,6 +1693,7 @@ function SimulatorWidget(node) {
       stopDebugger: stopDebugger,
       debugExec: debugExec,
       updateDebugInfo: updateDebugInfo,
+	  updateUnparser: updateUnparser,
       gotoAddr: gotoAddr,
       reset: reset,
       stop: stop,
@@ -1833,6 +1861,18 @@ function SimulatorWidget(node) {
       return false;
     }
 
+    //Returns name by addresss (or null)
+	function reverseLookup(address) {
+      var nameAndVal;
+      for (var i = 0; i < labelIndex.length; i++) {
+        nameAndAddr = labelIndex[i].split("|");
+        if (address == nameAndAddr[1]) { 
+        
+        return nameAndAddr[0]; }
+      }
+	  return null;
+    }
+
     // setPC() - Associates label with address
     function setPC(name, addr) {
       var nameAndAddr;
@@ -1873,6 +1913,7 @@ function SimulatorWidget(node) {
     return {
       indexLines: indexLines,
       find: find,
+	  reverseLookup: reverseLookup,
       getPC: getPC,
       displayMessage: displayMessage,
       reset: reset

@@ -9,9 +9,10 @@
   margin: 8px 0;
 }
 
-.start, .length {
+.start, .length, .unparser {
   width: 50px;
 }
+
 
 .widget pre {
   margin: 0;
@@ -25,7 +26,7 @@
   padding: 6px;
   border: 1px solid black;
   width: 420px;
-  height: 450px;
+  height: 470px;
   font-family: monospace;
   overflow: auto;
   float: left;
@@ -40,8 +41,8 @@
   margin-top: 6px;
   padding: 3px;
   padding-top: 8px;
-  height: 125px;
-  width: 152px;
+  height: 145px;
+  width: 312px;
   text-align: center;
   float: right;
 }
@@ -55,7 +56,7 @@
 }
 
 .monitorControls {
-  width: 587px;
+  width: 687px;
   clear: both;
   margin-bottom: 10px;
   padding: 0;
@@ -70,7 +71,7 @@
   padding: 6px;
   border: 1px solid #999;
   background-color: #ddd;
-  width: 587px;
+  width: 687px;
   height: 100px;
   overflow: auto;
   display: none;
@@ -82,7 +83,7 @@
   border: 1px solid #999;
   background-color: #eee;
   overflow: auto;
-  width: 587px;
+  width: 687px;
   height: 100px;
   text-align: left;
   font-size: 12px;
