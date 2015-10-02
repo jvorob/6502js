@@ -1585,12 +1585,23 @@ function SimulatorWidget(node) {
 
 	function updateUnparser() {
 		var text = $node.find(".unparser").val();
-		text = parseInt(text, 16);
-		label = labels.reverseLookup(text);
+		var addr = parseInt(text, 16);
+
+		label = labels.reverseLookup(addr);
 		if(label === null) {
-			label = labels.reverseLookup(text - 2);
+			label = labels.reverseLookup(addr - 2);
 		  if(label === null) {
-			label = "n/a";
+			text = text.replace(/^[\s0]+/, '').replace(/\s+$/, '');
+			addr = defines.parse("$" + text);  //force hex
+			if(addr === null) { addr = defines.parse(text); } //but still allow addrs
+			if(addr === null) {
+			  label = "n/a";
+			} else {
+			  label = addr2hex(addr);
+			  if(text == label.replace(/^0+/,'')) {
+				label = "n/a"; //ignore trivial result
+			  }
+			}
 		  } else {
 			label += "+2";
 		  }
