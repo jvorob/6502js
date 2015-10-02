@@ -1969,6 +1969,9 @@ number_skip_ascii:
   BPL number_fail
   ADC $00            ;add to existing number (carry happens in multiply)
   STA $00
+  BCC number_skip_add_carry
+  INC $01
+number_skip_add_carry:
   TYA
   CMP $05            ;check string end
   BEQ number_end
@@ -1998,10 +2001,31 @@ number_end_2:
   JSR pushDS
   JMP next
 
+;pushes 1 if top stack is single-byte
+;pushes 0 otherwise
+;doesnt pop stack
+single:
+DCB $06
+DCB "SINGL"
+DCB :number
+single_1:
+DCB :single_1+$2
+  LDX #0
+  STX $00
+  STX $01 ;prepare pushing value
+  LDY SP
+  LDA DSTACK+1,Y   ;get stack(1) hi-byte
+  BNE single_2
+  LDA #1 
+  STA $00          ;if hibyte is 0 then push 1
+single_2:
+  JSR pushDS
+  JMP next
+
 break:
 DCB $03
 DCB "BRK~~"
-DCB :number
+DCB :single
 break_1:
 DCB :break_1+$2
   BRK
