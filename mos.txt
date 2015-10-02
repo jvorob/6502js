@@ -29,7 +29,6 @@ define WA      $a2     ;word, word address (next word address?)
 define CONTEXT $a4     ;word, location to search dict from
 define CURRENT $a6     ;word, place to link entries to
 define DP      $a8     ;word, next free dictionary space
-define DPH      $a9
 define BASE    $aa
 define SP      $ab
 define RSP     $ac
@@ -2332,7 +2331,7 @@ DCB :start_1+$2
   LDA #<dict_start
   STA DP
   LDA #>dict_start
-  STA DPH
+  STA DP+1
   LDA #<last_dict
   STA CONTEXT
   STA CURRENT
