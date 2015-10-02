@@ -1,8 +1,11 @@
 EXECU, <R, R>, OVER, DROP, DUP, RROT, LROT, SWAP,
-AND, NOT, MOD/, /, *, !, C!, @, C@, +, -, 2COMP,
-ABS, =, <, >, <=, >=, 0=, 0<, CONST, VARIA, BASE, 
-SP, RSP, SPB, RSPB, DP, ',', 'C,', SP@, SP!, 
-(TODO) HERE, `, ENTRY, CA!, SINGL(E)
+AND, OR, NOT, MOD/, /, *, !, C!, @, C@, +, -, 2COMP,
+ABS, =, <, >, <=, >=, 0=, 0<, CONST, VARIA, 
+BASE, MODE, CONTE, CURRE, SP, RSP, SPB, RSPB, DP, 
+',', 'C,', SP@, SP!, DP@, DP!,
+ENTRY, CA!,
+CREAT,
+(TODO) `, SINGL(E)
 (TODO slightly after:) :, ;, if while, etc handlers
 DECIM, HEX, 
 QUEST, ?STAC, ?NUMB, NUMBE, 

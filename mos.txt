@@ -926,7 +926,7 @@ pushByte:
   DEY
   STA DSTACK,Y
   LDA #0
-  STA DSTACKH,Y
+  STA DSTACK+1,Y
   STY SP
   RTS
 
@@ -1064,20 +1064,24 @@ okmsg:
 
 
 outer_interp:
-  DCB :type_1
-  DCB :inline_1
-  DCB :aspace_1
-  DCB :token_1
-  DCB :search_1
-  DCB :_if,$0e
-  DCB :qnumber_1
-  DCB :_if,  $06
-  DCB :question_1
-  DCB :_while,$16
-  DCB :_while,$15
-  DCB :execute_1
-  DCB :qstack_1
-  DCB :_while,$1c
+  DCB :type_1          ;printmessage()
+  DCB :inline_1        ;readinput()
+  DCB :aspace_1        ;token:
+  DCB :token_1         ;gettoken(' ');
+  DCB :context_var_1
+  DCB :at_1
+  DCB :search_1        ;search(context)
+  DCB :_if,$0e         ;if(!found) {
+
+
+  DCB :qnumber_1       ;    qnumber()
+  DCB :_if,  $06       ;    if(!parsednumber) {
+  DCB :question_1      ;       if(question())
+  DCB :_while,$1a      ;         goto inline;
+  DCB :_while,$19      ;    } else goto token;
+  DCB :execute_1       ;} else { execute()
+  DCB :qstack_1        ;  check stack
+  DCB :_while,$20      ;  goto token}
 
 
 
@@ -1181,7 +1185,7 @@ DCB :over_1+$2
   INY
   LDA DSTACK,Y
   STA $00
-  LDA DSTACKH,Y
+  LDA DSTACK+1,Y
   STA $01
   LDX #0
   JSR pushDS
@@ -1224,22 +1228,22 @@ DCB :rrot_1+$2
   TAX
   LDA DSTACK,X   ;bottom
   STA $00        ;->temp
-  LDA DSTACKH,X
+  LDA DSTACK+1,X
   STA $01
   LDA DSTACK,Y   ;top
   STA DSTACK,X   ;->bottom
-  LDA DSTACKH,Y
-  STA DSTACKH,X
+  LDA DSTACK+1,Y
+  STA DSTACK+1,X
   DEX
   DEX
   LDA DSTACK,X  ;mid
   STA DSTACK,Y  ;->top
-  LDA DSTACKH,X
-  STA DSTACKH,Y
+  LDA DSTACK+1,X
+  STA DSTACK+1,Y
   LDA $00       ;temp
   STA DSTACK,X  ;->mid
   LDA $01
-  STA DSTACKH,X
+  STA DSTACK+1,X
   JMP next
 
 ;lrot if top of stack on right
@@ -1252,7 +1256,7 @@ DCB :lrot_1+$2
   LDX SP
   LDA DSTACK,X
   STA $00
-  LDA DSTACKH,X
+  LDA DSTACK+1,X
   STA $01
   TXA
   CLC
@@ -1260,18 +1264,18 @@ DCB :lrot_1+$2
   TAY
   LDA DSTACK,Y
   STA DSTACK,X
-  LDA DSTACKH,Y
-  STA DSTACKH,X
+  LDA DSTACK+1,Y
+  STA DSTACK+1,X
   INX
   INX
   LDA DSTACK,X
   STA DSTACK,Y
-  LDA DSTACKH,X
-  STA DSTACKH,Y
+  LDA DSTACK+1,X
+  STA DSTACK+1,Y
   LDA $00
   STA DSTACK,X
   LDA $01
-  STA DSTACKH,X
+  STA DSTACK+1,X
   JMP next
 
 swap:
@@ -1303,14 +1307,31 @@ DCB :and_1+$2
   AND DSTACK,Y
   STA DSTACK,Y
   LDA $01
-  AND DSTACKH,Y
-  STA DSTACKH,Y
+  AND DSTACK+1,Y
+  STA DSTACK+1,Y
+  JMP next
+
+or:
+DCB $02
+DCB "OR~~~"
+DCB :and
+or_1:
+DCB :or_1+$2
+  LDX #0
+  JSR popDS
+  LDY SP
+  LDA $00
+  ORA DSTACK,Y
+  STA DSTACK,Y
+  LDA $01
+  ORA DSTACK+1,Y
+  STA DSTACK+1,Y
   JMP next
 
 not:
 DCB $03
 DCB "NOT~~"
-DCB :and
+DCB :or
 not_1:
 DCB :not_1+$2
   LDX #0
@@ -1418,14 +1439,14 @@ DCB :at_1+$2
   LDX SP
   LDA DSTACK,X
   STA $00
-  LDA DSTACKH,X
+  LDA DSTACK+1,X
   STA $01
   LDY #0
   LDA ($00),Y
   STA DSTACK,X
   INY
   LDA ($00),Y
-  STA DSTACKH,X
+  STA DSTACK+1,X
   JMP next
 
 cat:
@@ -1437,10 +1458,10 @@ DCB :cat_1+$2
   LDX SP
   LDA DSTACK,X
   STA $00
-  LDA DSTACKH,X
+  LDA DSTACK+1,X
   STA $01
   LDA #0
-  STA DSTACKH,X
+  STA DSTACK+1,X
   TAY
   LDA ($00),Y
   STA DSTACK,X
@@ -1505,7 +1526,7 @@ DCB :twocomp
 abs_1:
 DCB :abs_1+$2
   LDY SP
-  LDA DSTACKH,Y
+  LDA DSTACK+1,Y
   BPL abs_end
   LDX #0
   JSR popDS
@@ -1638,10 +1659,34 @@ base_var_1:
 DCB :constant_scode
   DCB BASE,$00
 
+mode_var:
+DCB $04
+DCB "MODE~"
+DCB :base_var
+mode_var_1:
+DCB :constant_scode
+  DCB MODE,$00
+
+context_var:
+DCB $07
+DCB "CONTE"
+DCB :mode_var
+context_var_1:
+DCB :constant_scode
+  DCB CONTEXT,$00
+
+current_var:
+DCB $07
+DCB "CURRE"
+DCB :context_var
+current_var_1:
+DCB :constant_scode
+  DCB CURRENT,$00
+
 sp_var:
 DCB $02
 DCB "SP~~~"
-DCB :base_var
+DCB :current_var
 sp_var_1:
 DCB :constant_scode
   DCB SP,$00
@@ -1685,15 +1730,13 @@ DCB ",~~~~"
 DCB :dp_var
 comma_1:
 DCB :colon
-	DCB :_litnum, :DP
-	DCB :at_1
+	DCB :dpat_1
 	DCB :dup_1    
 	DCB :rrot_1          ;stack is daddr, word, daddr <
 	DCB :bang_1          ;add it to dict
 	DCB :_clitnum, 2
 	DCB :plus_1
-	DCB :_litnum, :DP
-	DCB :bang_1          ;advance dp 2
+	DCB :dpbang_1          ;advance dp 2
 	DCB :semi
 
 ;Enclose a stack byte in the dict
@@ -1703,15 +1746,13 @@ DCB "C,~~~"
 DCB :comma
 ccomma_1:
 DCB :colon
-	DCB :_litnum, :DP
-	DCB :at_1
+	DCB :dpat_1
 	DCB :dup_1    
 	DCB :rrot_1          ;stack is daddr, word, daddr <
 	DCB :cbang_1          ;add it to dict
 	DCB :_clitnum, 1
 	DCB :plus_1
-	DCB :_litnum, :DP
-	DCB :bang_1          ;advance dp 1
+	DCB :dpbang_1          ;advance dp 1
 	DCB :semi
 
 spat:
@@ -1736,11 +1777,81 @@ DCB :colon
   DCB :bang_1
   DCB :semi
 
+dpat:
+DCB $3
+DCB "DP@~~"
+DCB :spbang
+dpat_1:
+DCB :colon
+  DCB :_litnum, :DP
+  DCB :at_1
+  DCB :semi
+
+dpbang:
+DCB $3
+DCB "DP!~~"
+DCB :dpat
+dpbang_1:
+DCB :colon
+  DCB :_litnum, :DP
+  DCB :bang_1
+  DCB :semi
+
+;CURRENT @
+;last entry added's header
+entry:
+DCB 5
+DCB "ENTRY"
+DCB :dpbang
+entry_1:
+DCB :colon
+  DCB :current_var_1
+  DCB :at_1
+  DCB :semi
+
+;modifies last entry's (or curr entry's) CA
+;sets to popstack
+code_addr_bang:
+DCB 3
+DCB "CA!~~"
+DCB :entry
+code_addr_bang_1:
+DCB :colon
+  DCB :entry_1
+  DCB :_clitnum, 8
+  DCB :plus_1
+  DCB :bang_1
+  DCB :semi
+
+;creates a header
+;links it along
+create:
+DCB 6
+DCB "CREAT"
+DCB :code_addr_bang
+create_1:
+DCB :colon
+  DCB :entry_1   ;store link to previous
+  DCB :dpat_1    
+  DCB :current_var_1
+  DCB :bang_1    ;update current (stack is now entry)
+  DCB :aspace_1  ;fetch a token
+  DCB :token_1
+  DCB :dpat_1
+  DCB :_clitnum, 6
+  DCB :plus_1
+  DCB :dpbang_1  ;enclose in dictionary
+  DCB :comma_1   ;enclose link
+  DCB :dpat_1
+  DCB :_clitnum, 2
+  DCB :plus_1
+  DCB :comma_1   ;enclose WA+2 as CA
+  DCB :semi
 
 decimal:
 DCB $07
 DCB "DECIM"
-DCB :spbang
+DCB :create
 decimal_1:
 DCB :decimal_1+$2
   LDA #$0a
@@ -2026,15 +2137,14 @@ DCB :clear_1+$2
   JMP next
 
 ;searches the dictionary for last token entered
+;searches vocab at top of stack
 search:
 DCB $06
 DCB "SEARC"
 DCB :clear
 search_1:
 DCB :search_1+$2
-  LDX #CONTEXT
-  JSR pushDS
-  LDX #0
+  LDX #0            ;pops vocab ptr 
   JSR popDS
   LDY #0
   LDA (DP),Y
@@ -2201,8 +2311,10 @@ DCB :start_1+$2
   STA DPH
   LDA #<last_dict
   STA CONTEXT
+  STA CURRENT
   LDA #>last_dict
   STA CONTEXT+1
+  STA CURRENT+1
 forth_restart:
   LDA #1
   STA MODE     ;set 1 bit clear others
@@ -2233,8 +2345,6 @@ dict_start:
 
 *=$de00
 DSTACK:
-*=$de01
-DSTACKH:
 *=$df00
 RSTACK:
 *=$df01
