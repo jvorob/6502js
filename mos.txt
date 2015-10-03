@@ -1947,9 +1947,6 @@ DCB "?NUMB"
 DCB :qstack
 qnumber_1:
 DCB :colon
-
-;DCB :_clitnum, 1, :semi     ;fail and return
-
   DCB :number_1       
   DCB :_if,$24                     ;if(number success) {
     DCB :_compile_p                ;  if(compiling)
