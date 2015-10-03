@@ -1947,7 +1947,7 @@ DCB "?NUMB"
 DCB :qstack
 qnumber_1:
 DCB :colon
-  DCB :number_1       
+  DCB :number_1                    ;try parsing number
   DCB :_if,$24                     ;if(number success) {
     DCB :_compile_p                ;  if(compiling)
     DCB :_if,$19                   ;  {
