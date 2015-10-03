@@ -962,38 +962,47 @@ fetch:
   RTS
 
 
+;Conditional jump forward
 _if:
   DCB :_if+$2
   LDX #0
   JSR popDS
   LDA $00
   ORA $01
-  BEQ _if_f
+  BEQ _else+$2  ;if false jump forward
   INC IR
   BEQ _if_incirh
   JMP next
-_if_f:
+_if_incirh:
+  INC IR+1
+  JMP next
+
+;jumps forward specified number of bytes 
+;must be at least 1 to skip over itself
+_else:
+  DCB :_else+$2
   LDA (IR,X)
   CLC
   ADC IR
   STA IR
   BCS _if_incirh
   JMP next
-_if_incirh:
-  INC IR+1
-  JMP next
 
+
+;conditional jump back
 _end:
   DCB :_end+$2
   LDX #0
   JSR popDS
   LDA $00
   ORA $01
-  BEQ _while+$2
+  BEQ _while+$2 ;jump back
   INC IR
   BEQ _if_incirh
   JMP next
 
+;unconditional jump back
+;must be at least 2 to skip back over _while instruction
 _while:
   DCB :_while+$2
   LDA IR
@@ -1041,6 +1050,20 @@ _patch:
   JSR popDS
   JMP forth_start
 
+;pushes compile mode to stack
+_compile_p:
+  DCB :_compile_p+$2
+  LDX #0
+  STX $00
+  STX $01
+  LDA #$4  ;bit 3
+  BIT MODE
+  BEQ _compile_p_2
+  LDA #1
+  STA $00
+_compile_p_2:
+  JSR pushDS
+  JMP next
 
 
 *=$d000
@@ -1915,17 +1938,41 @@ DCB :colon
   DCB :_patch
   DCB :semi
 
+;parse number
+;if in compile mode, enclose with handler
+;also push 0 on success, 1 on failure
 qnumber:
 DCB $07
 DCB "?NUMB"
 DCB :qstack
 qnumber_1:
 DCB :colon
-  DCB :number_1
-  DCB :not_1
-  DCB :semi
+
+;DCB :_clitnum, 1, :semi     ;fail and return
+
+  DCB :number_1       
+  DCB :_if,$24                     ;if(number success) {
+    DCB :_compile_p                ;  if(compiling)
+    DCB :_if,$19                   ;  {
+      DCB :single_1                ;    if(single)
+      DCB :_if,$c                  ;    {
+	    DCB :_litnum, :_clitnum    ;      singlehandler
+	    DCB :comma_1               ;      enclose singlehandler
+	    DCB :ccomma_1              ;      enclose number
+      DCB :_else,$9                ;    } else {
+        DCB :_litnum, :_litnum     ;      wordhandler
+	    DCB :comma_1               ;      enclose handler
+	    DCB :comma_1               ;      enclose number
+                                   ;    }
+    DCB :_clitnum, 0               ;  } push(0) //success
+  DCB :_else,$4                    ;} else {
+    DCB :_clitnum, 1               ;  push(1) //failure
+  DCB :semi                        ;}
+
 
 ;parses a text number into a stack number
+;returns number, 1< if success
+;0< on fail
 ;$00,$01 is result
 ;$02,$03 is used by multiply
 ;$4 is multiplier
@@ -2161,6 +2208,8 @@ DCB :clear_1+$2
 
 ;searches the dictionary for last token entered
 ;searches vocab at top of stack
+;leaves: WA 0<
+;if failed: 1<
 search:
 DCB $06
 DCB "SEARC"
@@ -2204,15 +2253,15 @@ search_comp_loop:
 search_skip_carry:
   STA $00
   LDX #0
-  JSR pushDS
+  JSR pushDS       ;Push address
   LDX #0
   STX $00
   STX $01
-  JSR pushDS
+  JSR pushDS       ;push 0 (success)
   JMP next
 search_term:
   LDX #1
-  STX $00
+  STX $00          ;if failed push 1 (failure)
   DEX
   JSR pushDS
   JMP next
