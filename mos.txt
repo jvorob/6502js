@@ -1316,6 +1316,7 @@ DCB :swap_1+$2
   JSR pushDS
   JMP next
 
+;bitwise and
 and:
 DCB $03
 DCB "AND~~"
@@ -1333,6 +1334,7 @@ DCB :and_1+$2
   STA DSTACK+1,Y
   JMP next
 
+;bitwise or
 or:
 DCB $02
 DCB "OR~~~"
@@ -1350,10 +1352,29 @@ DCB :or_1+$2
   STA DSTACK+1,Y
   JMP next
 
+;bitwise xor
+xor:
+DCB $03
+DCB "XOR~~"
+DCB :or
+xor_1:
+DCB :xor_1+$2
+  LDX #0
+  JSR popDS
+  LDY SP
+  LDA $00
+  EOR DSTACK,Y
+  STA DSTACK,Y
+  LDA $01
+  EOR DSTACK+1,Y
+  STA DSTACK+1,Y
+  JMP next
+
+;logical not
 not:
 DCB $03
 DCB "NOT~~"
-DCB :or
+DCB :xor
 not_1:
 DCB :not_1+$2
   LDX #0

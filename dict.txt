@@ -1,5 +1,5 @@
 EXECU, <R, R>, OVER, DROP, DUP, RROT, LROT, SWAP,
-AND, OR, NOT, MOD/, /, *, !, C!, @, C@, +, -, 2COMP,
+AND, OR, XOR, NOT, MOD/, /, *, !, C!, @, C@, +, -, 2COMP,
 ABS, =, <, >, <=, >=, 0=, 0<, CONST, VARIA, 
 BASE, MODE, CONTE, CURRE, SP, RSP, SPB, RSPB, DP, 
 ',', 'C,', SP@, SP!, DP@, DP!,
