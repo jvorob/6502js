@@ -1808,8 +1808,18 @@ function SimulatorWidget(node) {
       return null;
     }
 
+	function removeComments(param) {
+      //input = input.replace(/^(.*?);.*/, "$1");
+      if(param.match(/^[^;"]*"[^"]*;[^"]*"/)) {
+        return param.replace(/^([^"]*?"[^"]*"[^;]*)/, "$1");
+      } else {
+        return param.replace(/^(.*?);.*/, "$1");
+      }
+	}
+
     return {
       parse: parse,
+	  removeComments: removeComments,
       define: define,
       lookup: lookup,
       reset: reset
@@ -1833,7 +1843,7 @@ function SimulatorWidget(node) {
     // Return false if label alread exists.
     function indexLine(input) {
       // remove comments
-      input = input.replace(/^(.*?);.*/, "$1");
+	  input = defines.removeComments(input);
 
       // trim line
       input = input.replace(/^\s+/, "");
@@ -2061,11 +2071,9 @@ function SimulatorWidget(node) {
       var label, command, param, addr;
 
       // remove comments
-
-      input = input.replace(/^(.*?);.*/, "$1");
+	  input = defines.removeComments(input);
 
       // trim line
-
       input = input.replace(/^\s+/, "");
       input = input.replace(/\s+$/, "");
 
@@ -2111,9 +2119,10 @@ function SimulatorWidget(node) {
         return true;
       }
 
+
       //General FOO BAR BAZ form
       if (input.match(/^\w+\s+.*?$/)) {
-        param = input.replace(/^\w+\s+(.*?)/, "$1");
+        param = input.replace(/^\w+\s+(.*?)$/, "$1");
       } else {
         if (input.match(/^\w+$/)) {
           param = "";
