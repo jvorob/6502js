@@ -981,6 +981,7 @@ _if_incirh:
 ;must be at least 1 to skip over itself
 _else:
   DCB :_else+$2
+  LDX #0
   LDA (IR,X)
   CLC
   ADC IR
