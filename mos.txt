@@ -1169,19 +1169,19 @@ DCB :colon
   DCB :dup_1        ;stack is WA M M M<
   DCB :_clitnum, $4 ;mode bit
   DCB :and_1
+  DCB :not_1
   DCB :swap_1
   DCB :_clitnum, $8 ;state bit
   DCB :and_1        ;stack is now WA, M, ModeF, StateF<
-  DCB :land_1       ;logical and
+  DCB :not_1
+  DCB :eq_1         ;are the modes equal
   DCB :swap_1       ;stack :WA, SeqM, M<
 
-DCB :break_1
       ;clear state bit
   DCB :_clitnum,$f7 ;SeqM, M, ~bit4
-  DCB :and_1,
+  DCB :and_1
   DCB :mode_var_1
   DCB :cbang_1      
-	  DCB :dots_1
 
   DCB :_if,$6      ;if(STATE == MODE)
   DCB :execute_1    ;  execute();
@@ -1197,16 +1197,15 @@ DCB :colon
   DCB :context_var_1
   DCB :at_1
   DCB :search_1          ;search context
-  DCB :_if,$2a           ;search compile, else jump to clitnum,0
+  DCB :_if,$27           ;search compile, else jump to clitnum,0
 	DCB :_compile_p
-	DCB :_if,$20            ;if compile mode, search compile, else return 1
+	DCB :_if,$1d            ;if compile mode, search compile, else return 1
 	  DCB :compiler_var_1
 	  DCB :at_1
 	  DCB :search_1
-	  DCB :_if,$7           ;if still not found
-	  DCB :_clitnum,1       ;return 1 (false)
-	  DCB :_else,$11        ;else set state bit
-	  DCB :mode_var_1
+	  DCB :_if,$4           ;if still not found return 1 (false)
+	  DCB :_else,$11        
+	  DCB :mode_var_1       ;else set state bit
 	  DCB :cat_1
 	  DCB :_clitnum,$8      ;set bit 4 (8)
 	  DCB :or_1
@@ -1236,7 +1235,6 @@ DCB :colon
   DCB :and_1
   DCB :mode_var_1
   DCB :cbang_1        ;finished clearing
-  DCB :break_1
   DCB :current_var_1  ;update context
   DCB :at_1
   DCB :context_var_1
@@ -1401,7 +1399,7 @@ DCB :swap_1+$2
 
 ;logical and
 land:
-DCB :$04
+DCB $04
 DCB "LAND~"
 DCB :swap
 land_1:
@@ -1429,7 +1427,7 @@ land_f:           ;false
 
 ;logical or
 lor:
-DCB :$03
+DCB $03
 DCB "LOR~~"
 DCB :land
 lor_1:
