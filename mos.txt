@@ -29,13 +29,14 @@ define WA      $a2     ;word, word address (next word address?)
 define CONTEXT $a4     ;word, location to search dict from
 define CURRENT $a6     ;word, place to link entries to
 define DP      $a8     ;word, next free dictionary space
-define BASE    $aa
-define SP      $ab
-define RSP     $ac
+define BASE    $aa     ;byte, current number base
+define SP      $ab     ;byte, stack index
+define RSP     $ac     ;byte, return stack index
 
-;1 bit is first start
-;2 bit is underflow
-;3 bit is state (true=compile)
+;1st bit is first start
+;2nd bit is underflow
+;3rd(4) bit is mode (true=compile)
+;4th(8) bit is state (true = immediate)
 define MODE    $ad
 define esc_char $5c
 
@@ -1091,20 +1092,16 @@ outer_interp:
   DCB :inline_1        ;readinput()
   DCB :aspace_1        ;token:
   DCB :token_1         ;gettoken(' ');
-  DCB :context_var_1
-  DCB :at_1
-  DCB :search_1        ;search(context)
+  DCB :qsearch_1       ;qsearch()
   DCB :_if,$0e         ;if(!found) {
-
-
   DCB :qnumber_1       ;    qnumber()
   DCB :_if,  $06       ;    if(!parsednumber) {
   DCB :question_1      ;       if(question())
-  DCB :_while,$1a      ;         goto inline;
-  DCB :_while,$19      ;    } else goto token;
-  DCB :execute_1       ;} else { execute()
+  DCB :_while,$16      ;         goto inline;
+  DCB :_while,$15      ;    } else goto token;
+  DCB :qexecute_1       ;} else { execute()
   DCB :qstack_1        ;  check stack
-  DCB :_while,$20      ;  goto token}
+  DCB :_while,$1c      ;  goto token}
 
 
 
@@ -1160,11 +1157,96 @@ run_1:
   JMP ($0000)
 
 
+;starts with word address on the stack
+;executes if state=mode
+;otherwise stores in dict
+;then checks stack?
+qexecute_1:
+DCB :colon
+  DCB :mode_var_1
+  DCB :cat_1
+  DCB :dup_1
+  DCB :dup_1        ;stack is WA M M M<
+  DCB :_clitnum, $4 ;mode bit
+  DCB :and_1
+  DCB :swap_1
+  DCB :_clitnum, $8 ;state bit
+  DCB :and_1        ;stack is now WA, M, ModeF, StateF<
+  DCB :land_1       ;logical and
+  DCB :swap_1       ;stack :WA, SeqM, M<
+
+DCB :break_1
+      ;clear state bit
+  DCB :_clitnum,$f7 ;SeqM, M, ~bit4
+  DCB :and_1,
+  DCB :mode_var_1
+  DCB :cbang_1      
+	  DCB :dots_1
+
+  DCB :_if,$6      ;if(STATE == MODE)
+  DCB :execute_1    ;  execute();
+  DCB :_else,$3     ;else
+  DCB :comma_1      ;  enclose();
+  DCB :semi
+
+;First searches context
+;Then searches compile (setting state if found)
+;returns wa 
+qsearch_1:
+DCB :colon
+  DCB :context_var_1
+  DCB :at_1
+  DCB :search_1          ;search context
+  DCB :_if,$2a           ;search compile, else jump to clitnum,0
+	DCB :_compile_p
+	DCB :_if,$20            ;if compile mode, search compile, else return 1
+	  DCB :compiler_var_1
+	  DCB :at_1
+	  DCB :search_1
+	  DCB :_if,$7           ;if still not found
+	  DCB :_clitnum,1       ;return 1 (false)
+	  DCB :_else,$11        ;else set state bit
+	  DCB :mode_var_1
+	  DCB :cat_1
+	  DCB :_clitnum,$8      ;set bit 4 (8)
+	  DCB :or_1
+	  DCB :mode_var_1
+	  DCB :cbang_1          ;finished setting
+	  DCB :_else,$6          ;return 0 (jump to clitnum-0)
+						  ;else:
+	  DCB :_clitnum, 1      ;return 1
+	  DCB :semi
+  DCB :_clitnum,0
+  DCB :semi
+
+
+
+last_compile:
+semicolon: ;(compile word)
+DCB $1
+DCB ";~~~~"
+DCB :0
+semicolon_1:
+DCB :colon
+  DCB :_litnum, :semi
+  DCB :comma_1        ;enclose semi
+  DCB :mode_var_1     ;clear compile mode
+  DCB :cat_1
+  DCB :_clitnum, $fb  ;$ff - 4 (3rd bit is mode) 
+  DCB :and_1
+  DCB :mode_var_1
+  DCB :cbang_1        ;finished clearing
+  DCB :break_1
+  DCB :current_var_1  ;update context
+  DCB :at_1
+  DCB :context_var_1
+  DCB :bang_1         ;finished updating
+  DCB :semi
 
 execute:
 DCB $07
 DCB "EXECU"
-DCB $00,$00
+DCB :0
 execute_1:
 DCB :execute_1+$2
   LDX #WA
@@ -1317,11 +1399,65 @@ DCB :swap_1+$2
   JSR pushDS
   JMP next
 
+;logical and
+land:
+DCB :$04
+DCB "LAND~"
+DCB :swap
+land_1:
+DCB :land_1+$2
+  LDX #0
+  JSR popDS
+  LDY SP
+  LDA $00
+  ORA $00
+  BEQ land_f
+  LDA DSTACK,Y
+  ORA DSTACK+1,Y
+  BEQ land_f
+  LDA #1          ;true
+  STA DSTACK,Y
+  LDA #0
+  STA DSTACK+1,Y
+  JMP next
+land_f:           ;false
+  LDA #0
+  STA DSTACK,Y
+  STA DSTACK+1,Y
+  JMP next
+
+
+;logical or
+lor:
+DCB :$03
+DCB "LOR~~"
+DCB :land
+lor_1:
+DCB :lor_1+$2
+  LDX #0
+  JSR popDS
+  LDY SP
+  LDA $00
+  ORA $00
+  ORA DSTACK,Y
+  ORA DSTACK+1,Y
+  BEQ lor_f
+  LDA #1         ;true
+  STA DSTACK,Y
+  LDA #0
+  STA DSTACK+1,Y
+  JMP next
+lor_f:           ;false
+  LDA #0
+  STA DSTACK,Y
+  STA DSTACK+1,Y
+  JMP next
+
 ;bitwise and
 and:
 DCB $03
 DCB "AND~~"
-DCB :swap
+DCB :lor
 and_1:
 DCB :and_1+$2
   LDX #0
@@ -1727,10 +1863,19 @@ current_var_1:
 DCB :constant_scode
   DCB CURRENT,$00
 
+
+compiler_var:
+DCB $8
+DCB "COMPI"
+DCB :current_var
+compiler_var_1:
+DCB :variable_scode
+  DCB :0 ;placeholder, will be filled on startup
+
 sp_var:
 DCB $02
 DCB "SP~~~"
-DCB :current_var
+DCB :compiler_var
 sp_var_1:
 DCB :constant_scode
   DCB SP,$00
@@ -1774,14 +1919,14 @@ DCB ",~~~~"
 DCB :dp_var
 comma_1:
 DCB :colon
-	DCB :dpat_1
-	DCB :dup_1    
-	DCB :rrot_1          ;stack is daddr, word, daddr <
-	DCB :bang_1          ;add it to dict
-	DCB :_clitnum, 2
-	DCB :plus_1
-	DCB :dpbang_1          ;advance dp 2
-	DCB :semi
+  DCB :dpat_1
+  DCB :dup_1    
+  DCB :rrot_1          ;stack is daddr, word, daddr <
+  DCB :bang_1          ;add it to dict
+  DCB :_clitnum, 2
+  DCB :plus_1
+  DCB :dpbang_1          ;advance dp 2
+  DCB :semi
 
 ;Enclose a stack byte in the dict
 ccomma:
@@ -1790,14 +1935,14 @@ DCB "C,~~~"
 DCB :comma
 ccomma_1:
 DCB :colon
-	DCB :dpat_1
-	DCB :dup_1    
-	DCB :rrot_1          ;stack is daddr, word, daddr <
-	DCB :cbang_1          ;add it to dict
-	DCB :_clitnum, 1
-	DCB :plus_1
-	DCB :dpbang_1          ;advance dp 1
-	DCB :semi
+  DCB :dpat_1
+  DCB :dup_1    
+  DCB :rrot_1          ;stack is daddr, word, daddr <
+  DCB :cbang_1          ;add it to dict
+  DCB :_clitnum, 1
+  DCB :plus_1
+  DCB :dpbang_1          ;advance dp 1
+  DCB :semi
 
 spat:
 DCB $3
@@ -1975,13 +2120,13 @@ DCB :colon
     DCB :_if,$19                   ;  {
       DCB :single_1                ;    if(single)
       DCB :_if,$c                  ;    {
-	    DCB :_litnum, :_clitnum    ;      singlehandler
-	    DCB :comma_1               ;      enclose singlehandler
-	    DCB :ccomma_1              ;      enclose number
+        DCB :_litnum, :_clitnum    ;      singlehandler
+        DCB :comma_1               ;      enclose singlehandler
+        DCB :ccomma_1              ;      enclose number
       DCB :_else,$9                ;    } else {
         DCB :_litnum, :_litnum     ;      wordhandler
-	    DCB :comma_1               ;      enclose handler
-	    DCB :comma_1               ;      enclose number
+        DCB :comma_1               ;      enclose handler
+        DCB :comma_1               ;      enclose number
                                    ;    }
     DCB :_clitnum, 0               ;  } push(0) //success
   DCB :_else,$4                    ;} else {
@@ -2150,12 +2295,30 @@ DCB :colon
   DCB :display_1    ;display the result
   DCB :semi
 
+;prints out an unsigned number from the stack
+udot:
+DCB $02
+DCB "U.~~~"
+DCB :dot
+udot_1:
+DCB :colon
+  DCB :_clitnum,$0  ;terminating null
+  DCB :aspace_1
+  DCB :lrot_1       ;stack is now 0 SPC NUM <
+  DCB :digascii_1   ;pull out a digit
+  DCB :dup_1        ;if remainder!=0
+  DCB :_if,$04
+  DCB :_while,$09   ;->digascii_1
+  DCB :drop_1       ;else drop remainder
+  DCB :display_1    ;display the result
+  DCB :semi
+
 ;prints out char codes from the stack
 ;until it hits a zero
 display:
 DCB $07
 DCB "DISPL"
-DCB :dot
+DCB :udot
 display_1:
 DCB :colon
   DCB :dup_1
@@ -2406,6 +2569,10 @@ DCB :start_1+$2
   LDA #>last_dict
   STA CONTEXT+1
   STA CURRENT+1
+  LDA #<last_compile
+  STA compiler_var_1+2
+  LDA #>last_compile
+  STA compiler_var_1+3
 forth_restart:
   LDA #1
   STA MODE     ;set 1 bit clear others
