@@ -6,6 +6,9 @@
 ;
 ; 0.2:
 ;      Cleaned up post-escape
+;
+; 0.3:
+;	   Compile mode works, colon works
 
 
 define buff $10
@@ -1998,11 +2001,11 @@ DCB :colon
 
 ;modifies last entry's (or curr entry's) CA
 ;sets to popstack
-code_addr_bang:
+ca_bang:
 DCB 3
 DCB "CA!~~"
 DCB :entry
-code_addr_bang_1:
+ca_bang_1:
 DCB :colon
   DCB :entry_1
   DCB :_clitnum, 8
@@ -2015,7 +2018,7 @@ DCB :colon
 create:
 DCB 6
 DCB "CREAT"
-DCB :code_addr_bang
+DCB :ca_bang
 create_1:
 DCB :colon
   DCB :entry_1   ;store link to previous
@@ -2035,10 +2038,27 @@ DCB :colon
   DCB :comma_1   ;enclose WA+2 as CA
   DCB :semi
 
+wcolon:
+DCB $1
+DCB ":~~~~"
+DCB :create
+wcolon_1:
+DCB :colon
+  DCB :create_1          ;create a word
+  DCB :_litnum, :colon   
+  DCB :ca_bang_1          ;make it secondary
+  DCB :mode_var_1        ;turn on compile mode
+  DCB :cat_1
+  DCB :_clitnum, $4      ;bit #3
+  DCB :or_1
+  DCB :mode_var_1
+  DCB :cbang_1
+  DCB :semi
+
 decimal:
 DCB $07
 DCB "DECIM"
-DCB :create
+DCB :wcolon
 decimal_1:
 DCB :decimal_1+$2
   LDA #$0a

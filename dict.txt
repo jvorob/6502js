@@ -5,9 +5,9 @@ BASE, MODE, CONTE, CURRE, COMPI, SP, RSP, SPB, RSPB, DP,
 ',', 'C,', SP@, SP!, DP@, DP!,
 
 ENTRY, CA!,
-CREAT,
+CREAT, :
 (TODO) `, 
-(TODO slightly after:) :, ;, if while, etc handlers
+(TODO slightly after:) if while, etc handlers
 DECIM, HEX, 
 QUEST, ?STAC, ?NUMB, NUMBE, SINGL,
 BRK, .S, D., ., DISPL, DIGAS, ASCII, ECHO, CLEAR, 
