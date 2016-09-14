@@ -47,15 +47,16 @@ define esc_char $5c
 
 init:
   JMP forth_start
-  get_line:
+
+get_line:
   JSR clear_buff
-  get_line_loop:
+get_line_loop:
   JSR get_key
   CMP #esc_char
   BNE get_line_end
   JSR handle_escape
   JMP get_line_loop
-  get_line_end:
+get_line_end:
   JSR type_char
   JMP get_line_loop
 
@@ -116,11 +117,13 @@ he_d:
 
 he_c:
   JMP clear_entry
-  he_j:
+
+he_j:
   LDA #1
   JSR scroll_up_all
   RTS
-  he_k:
+
+he_k:
   RTS
 
 he_l:
@@ -629,9 +632,9 @@ newline:
   AND #$fe
   CMP #$12
   BMI newline_1
-  LDA #4
+  LDA #2
   JSR scroll_up_all
-  LDA #$a
+  LDA #$e ;was $a
 newline_1:
   STA curs_h
   RTS
@@ -2055,10 +2058,18 @@ DCB :colon
   DCB :cbang_1
   DCB :semi
 
+;adds the last word to the compile vocabulary
+immediate:
+DCB $9
+DCB "IMMED"
+DCB :wcolon
+immediate_1:
+DCB :colon
+
 decimal:
 DCB $07
 DCB "DECIM"
-DCB :wcolon
+DCB :immediate
 decimal_1:
 DCB :decimal_1+$2
   LDA #$0a
@@ -2531,7 +2542,7 @@ DCB :token
 inline_1:
 DCB :inline_1+$2
   JSR freshline
-  LDA #39
+  LDA #59
   STA buff_size
   LDA #$3e
   JSR type_char
