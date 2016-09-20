@@ -1,11 +1,45 @@
-EXECU, <R, R>, OVER, DROP, DUP, RROT, LROT, SWAP,
-LAND, LOR, AND, OR, XOR, NOT, MOD/, /, *, !, C!, @, C@, +, -, 2COMP,
-ABS, =, <, >, <=, >=, 0=, 0<, CONST, VARIA, 
-BASE, MODE, CONTE, CURRE, COMPI, SP, RSP, SPB, RSPB, DP, 
-',', 'C,', SP@, SP!, DP@, DP!,
+; Execute the WA on the stack
+EXECUTE
+
+; Push to / pop from the return stack
+<R, R>
+
+; Stack ops
+OVER, DROP, DUP, RROT, LROT, SWAP,
+; Logic ops (logical and bitwise)
+LAND, LOR, AND, OR, XOR, NOT
+
+; math
+MOD/, /, *
+
+
+!, C! ;store word, store byte (store swp . at .)
+@, C@ ;fetch word, fetch byte
+
+; more math
++, -, 2COMP, ABS
+
+; comparisons
+=, <, >, <=, >=, 0=, 0<
+
+;???
+CONSTANT, VARIABLE, 
+
+BASE ;number base
+MODE ;does various things
+CONTEXT
+CURRENT
+COMPILER ;pointer to head of compiler dict
+SP, RSP
+SPB, RSPB
+DP, 
+
+',' , 'C,', SP@, SP!, DP@, DP!,
 
 ENTRY, CA!,
 CREAT, :, IMMEDIATE
+
+
 (TODO) `, 
 (TODO slightly after:) if while, etc handlers
 DECIM, HEX, 

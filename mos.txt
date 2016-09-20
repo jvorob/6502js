@@ -11,18 +11,26 @@
 ;	   Compile mode works, colon works
 
 
+;text input buffer
 define buff $10
 define max_buff_size $50
 define buff_size $61
 define buff_pos $62
+
+;cursor position: pointer to top left pixel in vram
 define curs_l $63
 define curs_h $64
 define heap_l $65
 define heap_h $66
+
+;pointer to character bitmap for character to be drawn
 define D_BMP_L $e0
 define D_BMP_H $e1
+
+;generic data storage
 define D_0 $e2
 define D_1 $e3
+
 define P0L $90
 define P0H $91
 define P1L $92
@@ -47,6 +55,11 @@ define esc_char $5c
 
 init:
   JMP forth_start
+
+
+;;;;;;;;;;;;;;;
+;; MAIN IO ROUTINES
+
 
 get_line:
   JSR clear_buff
@@ -84,12 +97,16 @@ handle_escape:
   RTS
 
 
+;Handle \e ('enter' sequence)
+;Discard the handle_escape return address,
+;return directly to caller of get_line
 he_e:
   PLA
   PLA
   RTS
 
 he_h:
+  BRK
   JSR he_s
   JSR reset_cursor
   LDA #<help_string
@@ -102,6 +119,8 @@ he_h:
   JSR he_l
   RTS
 
+;Handle \d (backspace)
+;Delete one character from the input buffer
 he_d:
   LDX buff_pos
   BEQ he_d_end
@@ -115,17 +134,22 @@ he_d:
   he_d_end:
   RTS
 
+;Handle \c (clear whole line)
 he_c:
   JMP clear_entry
 
+;Scroll up
 he_j:
   LDA #1
   JSR scroll_up_all
   RTS
 
+;??
 he_k:
   RTS
 
+;"Load screen" (experimental)
+;For use with \s
 he_l:
   JSR clear_screen
   LDA $0e
@@ -142,10 +166,13 @@ he_l:
   JSR he_r
   RTS
 
+;Handle \r, (^l)
 he_r:
   JSR redraw_buff
   RTS
 
+;"Save screen" (experimental)
+;For use with \l
 he_s:
   LDA #0
   STA $01
@@ -178,21 +205,21 @@ he_s:
   RTS
 
 
-
+;Waits for a keypress, flashes the cursor in the interim
 get_key:
   SEC
   JSR cursor_flash
 poll_keys:
-  LDA $ff
-  BNE poll_keys_continue
+  LDA $ff                 ;new keypresses are placed into $00ff
+  BNE poll_keys_continue 
   INY
   NOP
   NOP
-  BNE poll_keys
-  ROL
+  BNE poll_keys  ;Flash the cursor once every 256 pollings
+  ROL            ;toggle the carry bit
   EOR #1
   LSR
-  JSR cursor_flash
+  JSR cursor_flash ;draw/clear the cursor
   JMP poll_keys
 poll_keys_continue:
   LDX #0
@@ -205,7 +232,9 @@ poll_keys_continue:
 
 cursor_clear:
   CLC
-;sets cursor to carry bit, preserves carry
+;draws the cursor if carry bit set
+;clears cursor if carry bit clear
+;preserves carry bit
 cursor_flash:
   LDA curs_h
   STA $01
@@ -223,6 +252,11 @@ cursor_flash_loop:
   LSR
   RTS
 
+
+;;;;;;;;;;;;;;;;;;;
+;; SCREEN ROUTINES
+
+;Lookup char bitmap from ascii code
 
 ;takes char code in A
 ;sets D_BMP_? to point to bitmap
@@ -252,6 +286,9 @@ lookup_key_2: ;D_BMP_L = A*5
   RTS
 
 
+;Draws the ascii char in A
+;at the current cursor position
+;Preserves x, y
 draw_char:
   STA D_1
   TXA
@@ -336,13 +373,13 @@ dc_end:
   TAX
   RTS
 
-
+;Clears the character under the cursor
 clear_char:
-  LDY #$04
+  LDY #$04         ;start at the rightmost (5th) pixel
   CLC
-cc_loop:
+cc_loop:           
   LDA #$00
-  STA (curs_l),Y
+  STA (curs_l),Y   ;clear 5 pixels
   DEY
   STA (curs_l),Y
   DEY
@@ -352,11 +389,12 @@ cc_loop:
   DEY
   STA (curs_l),Y
   TYA
-  ADC #$24
+  ADC #$24         ;move to the next row ($20), 5th pixel (+ $04)
   TAY
   BCC cc_loop
   RTS
 
+;Clear the input buffer
 clear_buff:
   LDA #0
   LDX #max_buff_size
@@ -367,6 +405,7 @@ cb_loop:
   STA buff_pos
   RTS
 
+;Clear the input buffer and the screen characters corresponding to it
 clear_entry:
   LDX buff_pos
   BNE ce_loop
@@ -382,6 +421,7 @@ ce_loop:
   STA buff_pos
   RTS
 
+;;wipes the whole screen
 clear_screen:
   CLC
   LDX #$02
@@ -395,6 +435,7 @@ cs_loop:
 cs_end:
   RTS
 
+;clears one page of video memory
 clear_page:
   STA cp_loop+$4
   STA cp_loop+$7
@@ -522,6 +563,10 @@ su_loop:
 su_end:
   RTS
 
+;Tries to type the character in reg A
+;(adds to buff, draws it, advances cursor)
+;returns if buffer full
+;newlines if necessary
 type_char:
   STA $00
   LDA buff_pos
@@ -554,7 +599,7 @@ redraw_buff:
   JSR draw_string
   RTS
 
-
+;prints a null-terminated string at current cursor position
 draw_string:
   LDY #0
   TAX
@@ -638,6 +683,15 @@ newline:
 newline_1:
   STA curs_h
   RTS
+
+
+
+;;;;;;;;;;;;;;;;;;;
+; END SCREEN ROUTINES
+
+
+;;;;;;;;;;;;;;;;;;;
+;; HEAP ROUTINES
 
 reset_heap:
   LDA #$b0
@@ -729,6 +783,9 @@ wf2:
   STA $00,X
   PLA
   RTS
+
+;;;;;;;;;;;;;;;;
+;; Misc Helper routines
 
 strncpy:
   TAX
@@ -899,6 +956,7 @@ multiply_dbl:
 multiply_end:
   RTS
 
+;Pops data stack into (X)
 popDS:
   LDY SP
   BNE popDS_notunderflow
@@ -1052,6 +1110,7 @@ _clitnum:
   BEQ _if_incirh
   JMP next
 
+;pop an address, restart execution there
 _patch:
   DCB :_patch+$2
   LDX #WA
@@ -1077,7 +1136,7 @@ _compile_p_2:
 *=$d000
 startmsg:
   DCB $0a
-  DCB "FORSH 0.2:"
+  DCB "FORSH 0.3:"
 
 restartmsg:
   DCB $08
@@ -1092,7 +1151,12 @@ okmsg:
   DCB " OK"
 
 
-
+;;;;;;;;
+; Outer interpeter
+; Gets input
+; See if it's a command (if so, execute it)
+; See if it's a number
+; 
 outer_interp:
   DCB :type_1          ;printmessage()
   DCB :inline_1        ;readinput()
@@ -1102,7 +1166,7 @@ outer_interp:
   DCB :_if,$0e         ;if(!found) {
   DCB :qnumber_1       ;    qnumber()
   DCB :_if,  $06       ;    if(!parsednumber) {
-  DCB :question_1      ;       if(question())
+  DCB :question_1      ;       question()
   DCB :_while,$16      ;         goto inline;
   DCB :_while,$15      ;    } else goto token;
   DCB :qexecute_1       ;} else { execute()
@@ -1110,8 +1174,20 @@ outer_interp:
   DCB :_while,$1c      ;  goto token}
 
 
+;;;;;;;;;;;;;;;;;;;;
+;;;;Inner interpreter
 
+;;Relevant stuff
+;WA: word address of instruction being executed, fetched from IR
+;(that is, the code/definition of that instruction)
+;IR: current instruction being executed, stepped by +2 each time
+;(i.e. position in its parent routine's code/definition)
+;Return Stack (RS), jumped back to on semicolon
+
+
+;Descend into executing a forth word
 colon:
+  ;Push the IR to the return stack
   LDY RSP
   DEY
   LDA IR+1
@@ -1120,14 +1196,18 @@ colon:
   LDA IR
   STA RSTACK,Y
   STY RSP
+
+  ;Forth-jump into the word
   LDA WA
   STA IR
   LDA WA+1
   STA IR+1
   JMP next
 
+;Return from executing a forth word
 semi:
   DCB :semi+$2
+  ;Pop return stack into IR
   LDY RSP
   LDA RSTACK,Y
   STA IR
@@ -1138,12 +1218,14 @@ semi:
   STY RSP
 next:
   CLC
+  ;*WA = *IR
   LDY #0
   LDA (IR),Y
   STA WA
   INY
   LDA (IR),Y
   STA WA+1
+  ;IR++
   LDA IR
   ADC #$02
   STA IR
@@ -1151,6 +1233,9 @@ next:
   INC IR+1
   CLC
 run:
+  ;Jump to contents of WA
+  ;i.e.: WA = 1111, *1111 = 2222, jmp 2222
+  ;Also, WA += 2, so that colon, can just jump into the new WA
   LDA WA+1
   STA run_1+$2
   LDA WA
@@ -1166,6 +1251,7 @@ run_1:
 ;starts with word address on the stack
 ;executes if state=mode
 ;otherwise stores in dict
+;(if compiliing, will only execute compile words, and will store others)
 ;then checks stack?
 qexecute_1:
 DCB :colon
@@ -1247,6 +1333,7 @@ DCB :colon
   DCB :bang_1         ;finished updating
   DCB :semi
 
+;Execute the word 
 execute:
 DCB $07
 DCB "EXECU"
@@ -1259,6 +1346,7 @@ DCB :execute_1+$2
   JMP run
 
 
+;Push to RS
 r_left:
 DCB $2
 DCB "<R~~~"
@@ -1271,6 +1359,7 @@ DCB :r_left_1+$2
   JMP next
 
 
+;Pop from RS
 r_right:
 DCB $2
 DCB "R>~~~"
@@ -1809,7 +1898,7 @@ DCB "CONST"
 DCB :zero_lt
 constant_1:
 DCB :colon
-;todo
+;TODO
 DCB :semi
 constant_scode:
   LDY #1
@@ -1828,29 +1917,35 @@ DCB "VARIA"
 DCB :constant
 variable_1:
 DCB :colon
-;todo
+;TODO
 DCB :semi
 variable_scode:
   LDX #WA
   JSR pushDS
   JMP next
 
+;actually a variable, returns address into zero page
+;Numeric base
 base_var:
 DCB $04
 DCB "BASE~"
 DCB :variable
 base_var_1:
-DCB :constant_scode
+DCB :constant_scode 
   DCB BASE,$00
 
+;actually a variable, returns address into zero page
+;Does various things
 mode_var:
 DCB $04
 DCB "MODE~"
 DCB :base_var
 mode_var_1:
 DCB :constant_scode
+DCB :constant_scode 
   DCB MODE,$00
 
+;actually a variable, returns address into zero page
 context_var:
 DCB $07
 DCB "CONTE"
@@ -1859,6 +1954,7 @@ context_var_1:
 DCB :constant_scode
   DCB CONTEXT,$00
 
+;actually a variable, returns address into zero page
 current_var:
 DCB $07
 DCB "CURRE"
@@ -1868,14 +1964,16 @@ DCB :constant_scode
   DCB CURRENT,$00
 
 
+;pointer to the head of the compile dictionary
 compiler_var:
 DCB $8
-DCB "COMPI"
+DCB "COMPILER"
 DCB :current_var
 compiler_var_1:
 DCB :variable_scode
   DCB :0 ;placeholder, will be filled on startup
 
+;actually a variable, returns address into zero page
 sp_var:
 DCB $02
 DCB "SP~~~"
@@ -1884,6 +1982,7 @@ sp_var_1:
 DCB :constant_scode
   DCB SP,$00
 
+;actually a variable, returns address into zero page
 rsp_var:
 DCB $03
 DCB "RSP~~"
@@ -2119,6 +2218,8 @@ DCB :question_1+$2
   JSR pushDS
   JMP next
 
+;Verify that the stack is intact
+;If not, jump to _patch
 qstack:
 DCB $06
 DCB "?STAC"
