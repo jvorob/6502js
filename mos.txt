@@ -1942,7 +1942,6 @@ DCB "MODE~"
 DCB :base_var
 mode_var_1:
 DCB :constant_scode
-DCB :constant_scode 
   DCB MODE,$00
 
 ;actually a variable, returns address into zero page
@@ -1967,7 +1966,7 @@ DCB :constant_scode
 ;pointer to the head of the compile dictionary
 compiler_var:
 DCB $8
-DCB "COMPILER"
+DCB "COMPI"
 DCB :current_var
 compiler_var_1:
 DCB :variable_scode
